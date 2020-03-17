@@ -1,0 +1,5 @@
+/bin
+/.vscode
+/*.user
+/Properties/launchSettings.json
+/obj
