@@ -13,6 +13,7 @@ namespace mrGitTags
 
         private Commit _latestTaggedCommit;
 
+        public int Index { get; set; }
         public string Name { get; }
         public string ProjectFile { get; }
         public string Directory { get; }

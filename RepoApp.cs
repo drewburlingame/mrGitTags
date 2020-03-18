@@ -1,7 +1,9 @@
-﻿using System.Drawing;
+﻿using System.Collections.Generic;
+using System.Drawing;
 using System.Threading.Tasks;
 using CommandDotNet;
 using CommandDotNet.Rendering;
+using MoreLinq.Extensions;
 using Pastel;
 
 namespace mrGitTags
@@ -23,33 +25,18 @@ namespace mrGitTags
 
         public void list()
         {
-            var projects = _repo.GetProjects();
-
-            for (int i = 0; i < projects.Count; i++)
-            {
-                var project = projects[i];
-                _console.Out.WriteLine(
-                    $"{$"#{i}".PadLeft(2)} {project.Name.Theme_ProjectName()}");
-            }
+            _repo.GetProjects().ForEach(p => 
+                _console.Out.WriteLine($"{$"#{p.Index}".PadLeft(2)} {p.Name.Theme_ProjectName()}"));
         }
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]
         public void status(
-            [Option(ShortName = "i", LongName = "project-index", Description = "show details only for the given project index")] int? projectIndex = null,
+            ProjectsOptions projectsOptions,
             [Option(ShortName = "s", LongName = "summary-only", Description = "list only the project and change summary.")] bool summaryOnly = false,
             [Option(ShortName = "f", LongName = "show-files", Description = "list all files changed within each project")] bool showFiles = false)
         {
-            var projects = _repo.GetProjects();
-
-            for (int i = 0; i < projects.Count; i++)
+            foreach (var project in _repo.GetProjects(projectsOptions))
             {
-                if (projectIndex.HasValue && i != projectIndex.Value)
-                {
-                    continue;
-                }
-
-                var project = projects[i];
-
                 if (project.LatestTag == null)
                 {
                     _console.Out.WriteLine($"{project.Name.Theme_ProjectName()}: {"no tag".Pastel(Color.Orange)}");
@@ -61,7 +48,7 @@ namespace mrGitTags
 
                 var changes = project.GetTreeChanges(headCommit);
 
-                _console.Out.WriteLine($"{$"#{i}".PadLeft(2)} {project.Name.Theme_ProjectName()}: {changes.Summary()}");
+                _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}: {changes.Summary()}");
                 if (!summaryOnly)
                 {
                     _console.Out.WriteLine($"  branch: {_repo.Git.Head.FriendlyName.Theme_GitName()} " +
@@ -70,7 +57,7 @@ namespace mrGitTags
                     _console.Out.WriteLine($"  tag   : {project.LatestTag.Tag.FriendlyName.Theme_GitName()} " +
                                           $"{taggedCommit.Author.Name.Theme_Person()} {taggedCommit.Committer.When.Theme_Date()}");
                     _console.Out.WriteLine($"          {taggedCommit.MessageShort}");
-                    _console.Out.WriteLine($" commits: git log --oneline {project.LatestTag.Tag.Target.ShortSha()}..HEAD -- {project.Directory}");
+                    _console.Out.WriteLine($" commits: {$"git log --oneline {project.LatestTag.Tag.Target.ShortSha()}^..HEAD -- {project.Directory}".Theme_GitLinks()}");
                     if (showFiles && changes.Count > 0)
                     {
                         _console.Out.WriteLine("  changes:");

@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LibGit2Sharp;
+using MoreLinq;
 using static System.IO.Directory;
 
 namespace mrGitTags
@@ -23,9 +25,41 @@ namespace mrGitTags
             Git = new Repository(directory);
         }
 
-        public IList<Project> GetProjects()
+        internal IList<Project> GetProjects()
         {
             return EnsureProjects().ToList();
+        }
+
+        internal IList<Project> GetProjects(ProjectsOptions projectsOptions)
+        {
+            if (!projectsOptions.Projects.Any())
+            {
+                return GetProjects();
+            }
+
+            return EnsureProjects()
+                .Where(p => BuildKeys(p).Any(k => 
+                    projectsOptions.Projects.Any(pk => pk == k)))
+                .ToList();
+        }
+
+        internal IList<Project> GetProjects(ProjectOptions projectOptions)
+        {
+            if (string.IsNullOrWhiteSpace(projectOptions.Project))
+            {
+                return GetProjects();
+            }
+
+            return EnsureProjects()
+                .Where(p => BuildKeys(p).Any(k => k == projectOptions.Project))
+                .ToList();
+        }
+
+        private static IEnumerable<string> BuildKeys(Project project)
+        {
+            yield return project.Name;
+            yield return project.Index.ToString();
+            yield return $"#{project.Index}";
         }
 
         public List<TagInfo> GetTagsOrEmpty(string projectName) => 
@@ -61,6 +95,8 @@ namespace mrGitTags
                                 && !p.Name.EndsWith("Example"))
                     .OrderBy(p => p.Name)
                     .ToList();
+
+                _projects.ForEach((project, i) => project.Index = i);
             }
 
             return _projects;

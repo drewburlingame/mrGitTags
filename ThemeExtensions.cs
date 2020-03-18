@@ -10,6 +10,7 @@ namespace mrGitTags
         public static string Theme_GitName(this object text) => text?.ToString().Pastel(Color.Cyan);
         public static string Theme_Person(this object text) => text?.ToString().Pastel(Color.DarkCyan);
         public static string Theme_Date(this object text) => text?.ToString().Pastel(Color.DeepSkyBlue);
+        public static string Theme_GitLinks(this object text) => text?.ToString().Pastel(Color.Green);
 
         public static string Theme_Change(this int changeCount, ChangeKind changeKind)
         {
