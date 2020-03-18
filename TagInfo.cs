@@ -13,7 +13,9 @@ namespace mrGitTags
 
         public bool IsPrerelease => !string.IsNullOrWhiteSpace(SemVersion.Prerelease);
 
-        private TagInfo(string name, SemVersion semVersion, Tag tag)
+        public string ShortSha => Tag.Target.ShortSha();
+
+        public TagInfo(string name, SemVersion semVersion, Tag tag)
         {
             Name = name;
             SemVersion = semVersion;

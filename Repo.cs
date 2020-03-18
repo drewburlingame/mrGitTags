@@ -43,16 +43,10 @@ namespace mrGitTags
                 .ToList();
         }
 
-        internal IList<Project> GetProjects(ProjectOptions projectOptions)
+        internal Project GetProjectOrDefault(string projectKey)
         {
-            if (string.IsNullOrWhiteSpace(projectOptions.Project))
-            {
-                return GetProjects();
-            }
-
             return EnsureProjects()
-                .Where(p => BuildKeys(p).Any(k => k == projectOptions.Project))
-                .ToList();
+                .SingleOrDefault(p => BuildKeys(p).Any(k => k == projectKey));
         }
 
         private static IEnumerable<string> BuildKeys(Project project)
@@ -67,6 +61,13 @@ namespace mrGitTags
 
         public bool TryGetTags(string projectName, out List<TagInfo> tagInfos) => 
             EnsureTags().TryGetValue(projectName, out tagInfos);
+
+        public Tag ApplyAndPush(string tagName, Commit commit)
+        {
+            var newTag = Git.ApplyTag(tagName, commit.Sha);
+            Git.Network.Push(Git.Network.Remotes["origin"], newTag.CanonicalName);
+            return newTag;
+        }
 
         private Dictionary<string, List<TagInfo>> EnsureTags()
         {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LibGit2Sharp;
+using Semver;
 
 namespace mrGitTags
 {
@@ -43,6 +44,31 @@ namespace mrGitTags
             Directory = directory ?? throw new ArgumentNullException(nameof(directory));
 
             _tags = repo.GetTagsOrEmpty(name);
+        }
+
+        public TagInfo Increment(SemVerElement element)
+        {
+            var nextVersion = Increment(LatestTag, element);
+            var newTag = _repo.Git.ApplyTag($"{Name}_{nextVersion}", HeadCommit.Sha);
+            var newTagInfo = TagInfo.ParseOrDefault(newTag);
+            _tags.Insert(0, newTagInfo);
+            return newTagInfo;
+        }
+
+        private SemVersion Increment(TagInfo tagInfo, SemVerElement type)
+        {
+            var semver = tagInfo.SemVersion;
+            switch (type)
+            {
+                case SemVerElement.major:
+                    return semver.Change(major: semver.Major + 1, minor: 0, patch: 0, prerelease: null);
+                case SemVerElement.minor:
+                    return semver.Change(minor: semver.Minor + 1, patch: 0, prerelease: null);
+                case SemVerElement.patch:
+                    return semver.Change(patch: semver.Patch + 1, prerelease: null);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
         }
 
         public ICollection<TreeEntryChanges> GetTreeChanges(Commit latestCommit = null)

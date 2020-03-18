@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,6 +24,7 @@ namespace mrGitTags
             return next();
         }
 
+        [Command(Description = "list the projects in the repo")]
         public void list()
         {
             _repo.GetProjects().ForEach(p => 
@@ -40,9 +41,22 @@ namespace mrGitTags
                 _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}");
                 foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name).Where(t => !t.IsPrerelease || includePrereleases))
                 {
-                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()}");
+                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()}  {tagInfo.ShortSha}");
                 }
             }
+        }
+
+        [Command(Description = "create and push a tag for the next version of the project")]
+        public void increment(
+            [Operand(Name = "project", Description = "The id or name of the project")] string projectKey,
+            [Option(ShortName = "t", LongName = "type")] SemVerElement element = SemVerElement.patch)
+        {
+            var project = _repo.GetProjectOrDefault(projectKey) ?? throw new ArgumentOutOfRangeException("project", $"unknown project:{projectKey}");
+            var nextTag = project.Increment(element);
+            _console.Out.WriteLine($"added {nextTag.FriendlyName}");
+            _console.Out.WriteLine("run the following command to push the tag to the remote");
+            _console.Out.WriteLine();
+            _console.Out.WriteLine($"git push origin {nextTag.FriendlyName}".Theme_GitLinks());
         }
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]
@@ -73,7 +87,10 @@ namespace mrGitTags
                     _console.Out.WriteLine($"  tag   : {project.LatestTag.Tag.FriendlyName.Theme_GitName()} " +
                                           $"{taggedCommit.Author.Name.Theme_Person()} {taggedCommit.Committer.When.Theme_Date()}");
                     _console.Out.WriteLine($"          {taggedCommit.MessageShort}");
-                    _console.Out.WriteLine($" commits: {$"git log --oneline {project.LatestTag.Tag.Target.ShortSha()}^..HEAD -- {project.Directory}".Theme_GitLinks()}");
+                    if (changes.Count > 0)
+                    {
+                        _console.Out.WriteLine($" commits: {$"git log --oneline {project.LatestTag.ShortSha}^..HEAD -- {project.Directory}".Theme_GitLinks()}");
+                    }
                     if (showFiles && changes.Count > 0)
                     {
                         _console.Out.WriteLine("  changes:");
