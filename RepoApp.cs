@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using CommandDotNet;
 using CommandDotNet.Rendering;
@@ -27,6 +28,21 @@ namespace mrGitTags
         {
             _repo.GetProjects().ForEach(p => 
                 _console.Out.WriteLine($"{$"#{p.Index}".PadLeft(2)} {p.Name.Theme_ProjectName()}"));
+        }
+
+        [Command(Description = "list all tags for the given project(s)")]
+        public void tags(
+            ProjectsOptions projectsOptions, 
+            [Option(ShortName = "i", LongName = "include-prereleases")] bool includePrereleases)
+        {
+            foreach (var project in _repo.GetProjects(projectsOptions))
+            {
+                _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}");
+                foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name).Where(t => !t.IsPrerelease || includePrereleases))
+                {
+                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()}");
+                }
+            }
         }
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]

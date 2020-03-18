@@ -9,6 +9,10 @@ namespace mrGitTags
         public SemVersion SemVersion { get; }
         public Tag Tag { get; }
 
+        public string FriendlyName => $"{Name}_{SemVersion}";
+
+        public bool IsPrerelease => !string.IsNullOrWhiteSpace(SemVersion.Prerelease);
+
         private TagInfo(string name, SemVersion semVersion, Tag tag)
         {
             Name = name;
@@ -32,5 +36,7 @@ namespace mrGitTags
 
             return new TagInfo(name, semver, tag);
         }
+
+        public override string ToString() => $"{nameof(TagInfo)}: {FriendlyName}";
     }
 }
