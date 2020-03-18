@@ -6,7 +6,7 @@ namespace mrGitTags
     {
         static void Main(string[] args)
         {
-            new AppRunner<App>(
+            new AppRunner<RepoApp>(
                     new AppSettings
                     {
                         DefaultArgumentMode = ArgumentMode.Operand,
