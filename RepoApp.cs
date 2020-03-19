@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommandDotNet;
 using CommandDotNet.Rendering;
+using LibGit2Sharp;
 using MoreLinq.Extensions;
 using Pastel;
 
@@ -34,14 +35,23 @@ namespace mrGitTags
         [Command(Description = "list all tags for the given project(s)")]
         public void tags(
             ProjectsOptions projectsOptions, 
-            [Option(ShortName = "i", LongName = "include-prereleases")] bool includePrereleases)
+            [Option(ShortName = "i", LongName = "include-prereleases")] bool includePrereleases,
+            [Option(ShortName = "l", LongName = "show-gitlog")] bool showGitLogCommand)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
                 _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}");
+                var previousSha = "HEAD";
                 foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name).Where(t => !t.IsPrerelease || includePrereleases))
                 {
-                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()}  {tagInfo.ShortSha}");
+                    var sha = tagInfo.ShortSha;
+                    var commit = _repo.Git.Lookup<Commit>(tagInfo.Tag.Target.Id);
+                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()} {commit.Committer.When.Date.ToShortDateString().Theme_Date()}  {sha}");
+                    if (showGitLogCommand)
+                    {
+                        _console.Out.WriteLine($"     {$"git log --oneline {sha}^..{previousSha} -- {project.Directory}".Theme_GitLinks()}");
+                    }
+                    previousSha = sha;
                 }
             }
         }
