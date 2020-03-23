@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using LibGit2Sharp;
 using Pastel;
 
@@ -10,7 +11,8 @@ namespace mrGitTags
         public static string Theme_GitName(this object text) => text?.ToString().Pastel(Color.Cyan);
         public static string Theme_GitNameAlt(this object text) => text?.ToString().Pastel(Color.GhostWhite);
         public static string Theme_Person(this object text) => text?.ToString().Pastel(Color.DarkCyan);
-        public static string Theme_Date(this object text) => text?.ToString().Pastel(Color.DeepSkyBlue);
+        public static string Theme_Date(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd").Pastel(Color.DeepSkyBlue);
+        public static string Theme_DateTime(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd HH:mm:SS").Pastel(Color.DeepSkyBlue);
         public static string Theme_GitLinks(this object text) => text?.ToString().Pastel(Color.Green);
 
         public static string Theme_Change(this int changeCount, ChangeKind changeKind)
