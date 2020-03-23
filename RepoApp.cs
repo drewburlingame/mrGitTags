@@ -41,17 +41,19 @@ namespace mrGitTags
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
                 _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}");
-                var previousSha = "HEAD";
+                var previousCommitName = "HEAD";
                 foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name).Where(t => !t.IsPrerelease || includePrereleases))
                 {
-                    var sha = tagInfo.ShortSha;
+                    var commitName = tagInfo.FriendlyName;
                     var commit = _repo.Git.Lookup<Commit>(tagInfo.Tag.Target.Id);
-                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()} {commit.Committer.When.Date.ToShortDateString().Theme_Date()}  {sha}");
                     if (showGitLogCommand)
                     {
-                        _console.Out.WriteLine($"     {$"git log --oneline {sha}^..{previousSha} -- {project.Directory}".Theme_GitLinks()}");
+                        // https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection  #Commit Ranges
+
+                        _console.Out.WriteLine($"     {$"git log --oneline --graph {commitName}..{previousCommitName} -- {project.Directory}".Theme_GitLinks()}");
                     }
-                    previousSha = sha;
+                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()} {commit.Committer.When.Theme_Date()}  {commitName}");
+                    previousCommitName = commitName;
                 }
             }
         }
@@ -92,10 +94,10 @@ namespace mrGitTags
                 if (!summaryOnly)
                 {
                     _console.Out.WriteLine($"  branch: {_repo.Git.Head.FriendlyName.Theme_GitName()} " +
-                                          $"{headCommit.Author.Name.Theme_Person()} {headCommit.Committer.When.Theme_Date()}");
+                                          $"{headCommit.Author.Name.Theme_Person()} {headCommit.Committer.When.Theme_DateTime()}");
                     _console.Out.WriteLine($"          {headCommit.MessageShort}");
                     _console.Out.WriteLine($"  tag   : {project.LatestTag.Tag.FriendlyName.Theme_GitName()} " +
-                                          $"{taggedCommit.Author.Name.Theme_Person()} {taggedCommit.Committer.When.Theme_Date()}");
+                                          $"{taggedCommit.Author.Name.Theme_Person()} {taggedCommit.Committer.When.Theme_DateTime()}");
                     _console.Out.WriteLine($"          {taggedCommit.MessageShort}");
                     if (changes.Count > 0)
                     {
