@@ -36,10 +36,11 @@ namespace mrGitTags
         [Command(Description = "list all tags for the given project(s)")]
         public void tags(
             CancellationToken cancellationToken,
-            ProjectsOptions projectsOptions, 
+            ProjectsOptions projectsOptions,
             [Option(ShortName = "i", LongName = "include-prereleases")] bool includePrereleases,
             [Option(ShortName = "f", LongName = "show-files")] bool showFiles,
-            [Option(ShortName = "c", LongName = "show-commits")] bool showGitCommits)
+            [Option(ShortName = "c", LongName = "show-commits")] bool showGitCommits,
+            [Option(ShortName = "t", LongName = "tag-count")] int tagCount = 5)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
@@ -47,6 +48,7 @@ namespace mrGitTags
                 TagInfo previousTagInfo = null;
                 foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name)
                     .Where(t => !t.IsPrerelease || includePrereleases)
+                    .Take(tagCount)
                     .TakeUntil(_ => cancellationToken.IsCancellationRequested))
                 {
                     var previousTarget = previousTagInfo?.Tag.Target ?? project.HeadCommit;
