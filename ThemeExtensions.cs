@@ -14,6 +14,13 @@ namespace mrGitTags
         public static string Theme_Date(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd").Pastel(Color.DeepSkyBlue);
         public static string Theme_DateTime(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd HH:mm:SS").Pastel(Color.DeepSkyBlue);
         public static string Theme_GitLinks(this object text) => text?.ToString().Pastel(Color.Green);
+        public static string Theme_GitMessage(this string text) => text.Pastel(text.StartsWith("Merge") ? Color.Yellow : Color.White);
+        public static string Theme_FileChange(this TreeEntryChanges change)
+        {
+            var path = change.Path == change.OldPath ? change.Path : $"{change.OldPath} > {change.Path}";
+            var color = change.Status.Theme_Change();
+            return $"{change.Status.ToString().PadLeft(11)} : {path}".Pastel(color);
+        }
 
         public static string Theme_Change(this int changeCount, ChangeKind changeKind)
         {

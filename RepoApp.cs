@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
 using CommandDotNet.Rendering;
@@ -34,26 +35,47 @@ namespace mrGitTags
 
         [Command(Description = "list all tags for the given project(s)")]
         public void tags(
+            CancellationToken cancellationToken,
             ProjectsOptions projectsOptions, 
             [Option(ShortName = "i", LongName = "include-prereleases")] bool includePrereleases,
-            [Option(ShortName = "l", LongName = "show-gitlog")] bool showGitLogCommand)
+            [Option(ShortName = "f", LongName = "show-files")] bool showFiles,
+            [Option(ShortName = "c", LongName = "show-commits")] bool showGitCommits)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
                 _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}");
-                var previousCommitName = "HEAD";
-                foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name).Where(t => !t.IsPrerelease || includePrereleases))
+                TagInfo previousTagInfo = null;
+                foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name)
+                    .Where(t => !t.IsPrerelease || includePrereleases)
+                    .TakeUntil(_ => cancellationToken.IsCancellationRequested))
                 {
-                    var commitName = tagInfo.FriendlyName;
-                    var commit = _repo.Git.Lookup<Commit>(tagInfo.Tag.Target.Id);
-                    if (showGitLogCommand)
+                    var previousTarget = previousTagInfo?.Tag.Target ?? project.HeadCommit;
+
+                    if (showGitCommits)
                     {
                         // https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection  #Commit Ranges
+                        _console.Out.WriteLine(
+                            $"     {$"git log --oneline --graph {tagInfo.FriendlyName}..{previousTagInfo?.FriendlyName ?? project.HeadCommit.ShortSha()} -- {project.Directory}".Theme_GitLinks()}");
 
-                        _console.Out.WriteLine($"     {$"git log --oneline --graph {commitName}..{previousCommitName} -- {project.Directory}".Theme_GitLinks()}");
+
+                        foreach (var commit in project
+                            .GetCommitsBetween(tagInfo.Tag.Target, previousTarget, cancellationToken)
+                            .TakeUntil(_ => cancellationToken.IsCancellationRequested))
+                        {
+                            _console.Out.WriteLine($"     {commit.ShortSha()} {commit.Author.When.Theme_DateTime()} {commit.MessageShort.Theme_GitMessage()}");
+                        }
                     }
-                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()} {commit.Committer.When.Theme_Date()}  {commitName}");
-                    previousCommitName = commitName;
+                    if (showFiles)
+                    {
+                        foreach (var file in project.GetFilesChangedBetween(tagInfo.Tag.Target, previousTarget))
+                        {
+                            _console.Out.WriteLine($"    {file.Theme_FileChange()}");
+                        }
+                    }
+
+                    var taggedCommit = _repo.Git.Lookup<Commit>(tagInfo.Tag.Target.Id);
+                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()} {taggedCommit.Committer.When.Theme_Date()}  {tagInfo.FriendlyName}");
+                    previousTagInfo = tagInfo;
                 }
             }
         }
@@ -88,7 +110,7 @@ namespace mrGitTags
                 var taggedCommit = project.LatestTaggedCommit;
                 var headCommit = _repo.Git.Head.Tip;
 
-                var changes = project.GetTreeChanges(headCommit);
+                var changes = project.GetFilesChangedSinceLatestTag(headCommit);
 
                 _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}: {changes.Summary()}");
                 if (!summaryOnly)
@@ -108,9 +130,7 @@ namespace mrGitTags
                         _console.Out.WriteLine("  changes:");
                         foreach (var change in changes)
                         {
-                            var path = change.Path == change.OldPath ? change.Path : $"{change.OldPath} > {change.Path}";
-                            var color = change.Status.Theme_Change();
-                            _console.Out.WriteLine($"    {change.Status.ToString().PadLeft(11)} : {path}".Pastel(color));
+                            _console.Out.WriteLine($"    {change.Theme_FileChange()}");
                         }
                     }
                 }
