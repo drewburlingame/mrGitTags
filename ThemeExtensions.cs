@@ -7,14 +7,20 @@ namespace mrGitTags
 {
     public static class ThemeExtensions
     {
-        public static string Theme_ProjectName(this object text) => text?.ToString().Pastel(Color.Cyan);
-        public static string Theme_GitName(this object text) => text?.ToString().Pastel(Color.Cyan);
-        public static string Theme_GitNameAlt(this object text) => text?.ToString().Pastel(Color.GhostWhite);
-        public static string Theme_Person(this object text) => text?.ToString().Pastel(Color.DarkCyan);
-        public static string Theme_Date(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd").Pastel(Color.DeepSkyBlue);
-        public static string Theme_DateTime(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd HH:mm:SS").Pastel(Color.DeepSkyBlue);
-        public static string Theme_GitLinks(this object text) => text?.ToString().Pastel(Color.Green);
+        public static string Theme_ProjectIndexAndName(this Project project) =>
+            $"{$"#{project.Index}".PadLeft(2)} {project.Name}".Pastel(Color.Cyan);
+
+        public static string Theme_GitName(this string text) => text?.Pastel(Color.Cyan);
+        public static string Theme_GitNameAlt(this string text) => text?.Pastel(Color.GhostWhite);
+        public static string Theme_GitLinks(this string text) => text?.Pastel(Color.LightGreen);
         public static string Theme_GitMessage(this string text) => text.Pastel(text.StartsWith("Merge") ? Color.Yellow : Color.White);
+
+        public static string Theme_Name(this Signature signature) => signature.Name.Pastel(Color.DarkCyan);
+        public static string Theme_WhenDate(this Signature signature) => signature.When.Theme_Date();
+        public static string Theme_WhenDateTime(this Signature signature) => signature.When.Theme_DateTime();
+        private static string Theme_Date(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd").Pastel(Color.DeepSkyBlue);
+        private static string Theme_DateTime(this DateTimeOffset dto) => dto.ToString("yyyy/MM/dd HH:mm:SS").Pastel(Color.DeepSkyBlue);
+
         public static string Theme_FileChange(this TreeEntryChanges change)
         {
             var path = change.Path == change.OldPath ? change.Path : $"{change.OldPath} > {change.Path}";

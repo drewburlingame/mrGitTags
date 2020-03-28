@@ -15,7 +15,10 @@ namespace mrGitTags
 
         public string ShortSha => Tag.Target.ShortSha();
 
-        public TagInfo(string name, SemVersion semVersion, Tag tag)
+        public TagInfo Previous { get; set; }
+        public TagInfo Next { get; set; }
+
+        private TagInfo(string name, SemVersion semVersion, Tag tag)
         {
             Name = name;
             SemVersion = semVersion;

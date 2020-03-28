@@ -1,4 +1,5 @@
-﻿using CommandDotNet;
+﻿using System;
+using CommandDotNet;
 
 namespace mrGitTags
 {
@@ -6,7 +7,7 @@ namespace mrGitTags
     {
         static void Main(string[] args)
         {
-            new AppRunner<RepoApp>(
+            var appRunner = new AppRunner<RepoApp>(
                     new AppSettings
                     {
                         DefaultArgumentMode = ArgumentMode.Operand,
@@ -15,8 +16,17 @@ namespace mrGitTags
                             ExpandArgumentsInUsage = true
                         }
                     })
-                .UseDefaultMiddleware()
-                .Run(args);
+                .UseDefaultMiddleware();
+
+            try
+            {
+                appRunner.Run(args);
+            }
+            catch (ArgumentException e)
+            {
+                Console.WriteLine(e.Message);
+                Environment.ExitCode = -1;
+            }
         }
     }
 }

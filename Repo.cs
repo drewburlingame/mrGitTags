@@ -16,13 +16,24 @@ namespace mrGitTags
         public string Dir { get; }
         public Repository Git { get; }
 
-        public Repo(string directory)
+        public Branch Branch { get; }
+        public Commit Tip => Branch.Tip;
+
+        public Repo(string directory, string branch)
         {
+            if (branch == null)
+            {
+                throw new ArgumentNullException(nameof(branch));
+            }
+
             directory ??= GetCurrentDirectory();
             directory = directory.Trim('/', '\\');
 
             Dir = directory;
             Git = new Repository(directory);
+            Branch = branch == "current" || branch == "!" 
+                ? Git.Head 
+                : Git.Branches[branch];
         }
 
         internal IList<Project> GetProjects()
@@ -79,7 +90,18 @@ namespace mrGitTags
                     .GroupBy(tag => tag.Name)
                     .ToDictionary(
                         g => g.Key,
-                        g => g.OrderByDescending(t => t.SemVersion).ToList());
+                        g =>
+                        {
+                            var tags = g.OrderByDescending(t => t.SemVersion).ToList();
+                            for (int i = 0; i < tags.Count; i++)
+                            {
+                                if(i-1 >= 0)
+                                    tags[i - 1].Previous = tags[i];
+                                if (i+1 < tags.Count)
+                                    tags[i + 1].Next = tags[i];
+                            }
+                            return tags;
+                        });
             }
 
             return _tagsByProject;

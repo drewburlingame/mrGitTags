@@ -23,7 +23,8 @@ namespace mrGitTags
 
         public TagInfo LatestTag => _tags.FirstOrDefault();
 
-        public Commit HeadCommit => _repo.Git.Head.Tip;
+        public Branch Branch => _repo.Branch;
+        public Commit Tip => Branch.Tip;
 
         public Commit LatestTaggedCommit => _latestTaggedCommit
             ??= LatestTag == null
@@ -51,7 +52,7 @@ namespace mrGitTags
         public TagInfo Increment(SemVerElement element)
         {
             var nextVersion = Increment(LatestTag, element);
-            var newTag = _repo.Git.ApplyTag($"{Name}_{nextVersion}", HeadCommit.Sha);
+            var newTag = _repo.Git.ApplyTag($"{Name}_{nextVersion}", Tip.Sha);
             var newTagInfo = TagInfo.ParseOrDefault(newTag);
             _tags.Insert(0, newTagInfo);
             return newTagInfo;
@@ -93,7 +94,7 @@ namespace mrGitTags
                 return new List<TreeEntryChanges>();
             }
 
-            latestCommit ??= _repo.Git.Head.Tip;
+            latestCommit ??= Tip;
             return GetFilesChangedBetween(LatestTaggedCommit, latestCommit);
         }
 

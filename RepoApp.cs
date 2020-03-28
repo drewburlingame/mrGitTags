@@ -15,69 +15,57 @@ namespace mrGitTags
     {
         private Repo _repo;
         private IConsole _console;
+        private IndentableStreamWriter _writer;
+        private Action<string> _writeln;
 
         public Task<int> Intercept(
-            InterceptorExecutionDelegate next, 
+            InterceptorExecutionDelegate next,
             RepoAppOptions options,
             IConsole console)
         {
             _console = console;
-            _repo = new Repo(options.RepoDirectory);
+            _writer = new IndentableStreamWriter(console.Out);
+            _writeln = _writer.WriteLine;
+
+            _repo = new Repo(options.RepoDirectory, options.Branch);
             return next();
         }
 
         [Command(Description = "list the projects in the repo")]
-        public void list()
+        public void projects()
         {
-            _repo.GetProjects().ForEach(p => 
-                _console.Out.WriteLine($"{$"#{p.Index}".PadLeft(2)} {p.Name.Theme_ProjectName()}"));
+            _repo.GetProjects().ForEach(p => _writeln($"{p.Theme_ProjectIndexAndName()}"));
         }
 
         [Command(Description = "list all tags for the given project(s)")]
         public void tags(
             CancellationToken cancellationToken,
             ProjectsOptions projectsOptions,
+            CommitsAndFilesArgs commitsAndFilesArgs,
             [Option(ShortName = "i", LongName = "include-prereleases")] bool includePrereleases,
-            [Option(ShortName = "f", LongName = "show-files")] bool showFiles,
-            [Option(ShortName = "c", LongName = "show-commits")] bool showGitCommits,
-            [Option(ShortName = "t", LongName = "tag-count")] int tagCount = 5)
+            [Option(ShortName = "t", LongName = "tag-count")] int tagCount = 3)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
-                _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}");
-                TagInfo previousTagInfo = null;
-                foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name)
-                    .Where(t => !t.IsPrerelease || includePrereleases)
-                    .Take(tagCount)
-                    .TakeUntil(_ => cancellationToken.IsCancellationRequested))
+                _writeln(null);
+                _writeln($"{project.Theme_ProjectIndexAndName()}");
+                using (_writer.Indent())
                 {
-                    var previousTarget = previousTagInfo?.Tag.Target ?? project.HeadCommit;
+                    _writeln($"{project.Branch.FriendlyName.Theme_GitNameAlt()}");
 
-                    if (showGitCommits)
+                    foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name)
+                        .Where(t => !t.IsPrerelease || includePrereleases)
+                        .Take(tagCount)
+                        .TakeUntil(_ => cancellationToken.IsCancellationRequested))
                     {
-                        // https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection  #Commit Ranges
-                        _console.Out.WriteLine(
-                            $"     {$"git log --oneline --graph {tagInfo.FriendlyName}..{previousTagInfo?.FriendlyName ?? project.HeadCommit.ShortSha()} -- {project.Directory}".Theme_GitLinks()}");
-
-
-                        foreach (var commit in project
-                            .GetCommitsBetween(tagInfo.Tag.Target, previousTarget, cancellationToken)
-                            .TakeUntil(_ => cancellationToken.IsCancellationRequested))
+                        using (_writer.Indent())
                         {
-                            _console.Out.WriteLine($"     {commit.ShortSha()} {commit.Author.When.Theme_DateTime()} {commit.MessageShort.Theme_GitMessage()}");
+                            WriteCommitsAndFiles(_writer, project, tagInfo, commitsAndFilesArgs, cancellationToken);
                         }
-                    }
-                    if (showFiles)
-                    {
-                        foreach (var file in project.GetFilesChangedBetween(tagInfo.Tag.Target, previousTarget))
-                        {
-                            _console.Out.WriteLine($"    {file.Theme_FileChange()}");
-                        }
-                    }
 
-                    var taggedCommit = _repo.Git.Lookup<Commit>(tagInfo.Tag.Target.Id);
-                    _console.Out.WriteLine($"   {tagInfo.FriendlyName.Theme_GitNameAlt()} {taggedCommit.Committer.When.Theme_Date()}  {tagInfo.FriendlyName}");
-                    previousTagInfo = tagInfo;
+                        var taggedCommit = _repo.Git.Lookup<Commit>(tagInfo.Tag.Target.Id);
+                        _writeln($"{tagInfo.FriendlyName.Theme_GitNameAlt()} {taggedCommit.Committer.Theme_WhenDate()}  {taggedCommit.Author.Theme_Name()}");
+                    }
                 }
             }
         }
@@ -87,54 +75,86 @@ namespace mrGitTags
             [Operand(Name = "project", Description = "The id or name of the project")] string projectKey,
             [Option(ShortName = "t", LongName = "type")] SemVerElement element = SemVerElement.patch)
         {
-            var project = _repo.GetProjectOrDefault(projectKey) ?? throw new ArgumentOutOfRangeException("project", $"unknown project:{projectKey}");
+            var project = _repo.GetProjectOrDefault(projectKey) ?? throw new ArgumentException($"unknown project:{projectKey}");
             var nextTag = project.Increment(element);
-            _console.Out.WriteLine($"added {nextTag.FriendlyName}");
-            _console.Out.WriteLine("run the following command to push the tag to the remote");
-            _console.Out.WriteLine();
-            _console.Out.WriteLine($"git push origin {nextTag.FriendlyName}".Theme_GitLinks());
+            _writeln($"added {nextTag.FriendlyName}");
+            _writeln("run the following command to push the tag to the remote");
+            _writeln(null);
+            _writeln($"git push origin {nextTag.FriendlyName}".Theme_GitLinks());
         }
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]
         public void status(
+            CancellationToken cancellationToken,
             ProjectsOptions projectsOptions,
-            [Option(ShortName = "s", LongName = "summary-only", Description = "list only the project and change summary.")] bool summaryOnly = false,
-            [Option(ShortName = "f", LongName = "show-files", Description = "list all files changed within each project")] bool showFiles = false)
+            CommitsAndFilesArgs commitsAndFilesArgs,
+            [Option(ShortName = "s", LongName = "summary-only", Description = "list only the project and change summary")] bool summaryOnly = false)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
+                _writeln(null);
                 if (project.LatestTag == null)
                 {
-                    _console.Out.WriteLine($"{project.Name.Theme_ProjectName()}: {"no tag".Pastel(Color.Orange)}");
+                    _writeln($"{project.Theme_ProjectIndexAndName()}: {"no tag".Pastel(Color.Orange)}");
                     continue;
                 }
 
                 var taggedCommit = project.LatestTaggedCommit;
-                var headCommit = _repo.Git.Head.Tip;
+                var tip = project.Branch.Tip;
 
-                var changes = project.GetFilesChangedSinceLatestTag(headCommit);
+                var changes = project.GetFilesChangedSinceLatestTag(tip);
 
-                _console.Out.WriteLine($"{$"#{project.Index}".PadLeft(2)} {project.Name.Theme_ProjectName()}: {changes.Summary()}");
+                _writeln($"{project.Theme_ProjectIndexAndName()}: {changes.Summary()}");
                 if (!summaryOnly)
                 {
-                    _console.Out.WriteLine($"  branch: {_repo.Git.Head.FriendlyName.Theme_GitName()} " +
-                                          $"{headCommit.Author.Name.Theme_Person()} {headCommit.Committer.When.Theme_DateTime()}");
-                    _console.Out.WriteLine($"          {headCommit.MessageShort}");
-                    _console.Out.WriteLine($"  tag   : {project.LatestTag.Tag.FriendlyName.Theme_GitName()} " +
-                                          $"{taggedCommit.Author.Name.Theme_Person()} {taggedCommit.Committer.When.Theme_DateTime()}");
-                    _console.Out.WriteLine($"          {taggedCommit.MessageShort}");
-                    if (changes.Count > 0)
+                    using (_writer.Indent())
                     {
-                        _console.Out.WriteLine($" commits: {$"git log --oneline {project.LatestTag.ShortSha}^..HEAD -- {project.Directory}".Theme_GitLinks()}");
-                    }
-                    if (showFiles && changes.Count > 0)
-                    {
-                        _console.Out.WriteLine("  changes:");
-                        foreach (var change in changes)
+                        _writeln($"branch: {tip.Committer.Theme_WhenDateTime()} {project.Branch.FriendlyName.Theme_GitName()} {tip.Author.Theme_Name()}");
+                        _writeln($"        {tip.MessageShort}");
+                        _writeln($"tag   : {taggedCommit.Committer.Theme_WhenDateTime()} {project.LatestTag.Tag.FriendlyName.Theme_GitName()} {taggedCommit.Author.Theme_Name()}");
+                        _writeln($"        {taggedCommit.MessageShort}");
+
+                        using (_writer.Indent())
                         {
-                            _console.Out.WriteLine($"    {change.Theme_FileChange()}");
+                            WriteCommitsAndFiles(_writer, project, project.LatestTag, commitsAndFilesArgs, cancellationToken);
                         }
                     }
+                }
+            }
+        }
+
+        private static void WriteCommitsAndFiles(IndentableStreamWriter writer, Project project, TagInfo tagInfo,
+            CommitsAndFilesArgs args, CancellationToken cancellationToken)
+        {
+            var nextTagInfo = tagInfo.Next;
+            var target = tagInfo.Tag.Target;
+            var nextTarget = nextTagInfo?.Tag.Target ?? project.Tip;
+
+            // https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection  #Commit Ranges
+            var commitRange = $"{tagInfo.FriendlyName}..{nextTagInfo?.FriendlyName ?? project.Branch.FriendlyName}";
+
+            if (args.ShowCommits)
+            {
+                writer.WriteLine($"git log --oneline --graph {commitRange} -- {project.Directory}".Theme_GitLinks());
+
+                foreach (var commit in project
+                    .GetCommitsBetween(target, nextTarget, cancellationToken)
+                    .TakeUntil(_ => cancellationToken.IsCancellationRequested))
+                {
+                    writer.WriteLine(
+                        $"{commit.ShortSha()} {commit.Author.Theme_WhenDateTime()} {commit.MessageShort.Theme_GitMessage()}");
+                }
+            }
+
+            if (args.ShowFiles)
+            {
+                // https://stackoverflow.com/questions/1552340/how-to-list-only-the-file-names-that-changed-between-two-commits/6827937
+
+                writer.WriteLine($"git diff --name-status {commitRange} -- {project.Directory}".Theme_GitLinks());
+
+                foreach (var file in project.GetFilesChangedBetween(target, nextTarget))
+                {
+                    writer.WriteLine($"{file.Theme_FileChange()}");
                 }
             }
         }
