@@ -60,7 +60,7 @@ namespace mrGitTags
 
         private SemVersion Increment(TagInfo tagInfo, SemVerElement type)
         {
-            var semver = tagInfo.SemVersion;
+            var semver = tagInfo?.SemVersion ?? new SemVersion(0,0,0);
             switch (type)
             {
                 case SemVerElement.major:
