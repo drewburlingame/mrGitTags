@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
+using CommandDotNet.Prompts;
 using CommandDotNet.Rendering;
 using LibGit2Sharp;
 using MoreLinq.Extensions;
@@ -85,10 +86,13 @@ namespace mrGitTags
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]
         public void status(
+            IPrompter prompter,
             CancellationToken cancellationToken,
             ProjectsOptions projectsOptions,
             CommitsAndFilesArgs commitsAndFilesArgs,
-            [Option(ShortName = "s", LongName = "summary-only", Description = "list only the project and change summary")] bool summaryOnly = false)
+            [Option(ShortName = "s", LongName = "summary-only", Description = "list only the project and change summary")] bool summaryOnly = false,
+            [Option(ShortName = "i", LongName = "interactive", Description = "prompt to increment version for each project with changes")] bool increment = false
+            )
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
@@ -102,7 +106,7 @@ namespace mrGitTags
                 var taggedCommit = project.LatestTaggedCommit;
                 var tip = project.Branch.Tip;
 
-                var changes = project.GetFilesChangedSinceLatestTag(tip);
+                var changes = project.GetFilesChangedSinceLatestTag(tip).ToList();
 
                 _writeln($"{project.Theme_ProjectIndexAndName()}: {changes.Summary()}");
                 if (!summaryOnly)
@@ -114,9 +118,37 @@ namespace mrGitTags
                         _writeln($"tag   : {taggedCommit.Committer.Theme_WhenDateTime()} {project.LatestTag.Tag.FriendlyName.Theme_GitName()} {taggedCommit.Author.Theme_Name()}");
                         _writeln($"        {taggedCommit.MessageShort}");
 
-                        using (_writer.Indent())
+                        if (changes.Any())
                         {
-                            WriteCommitsAndFiles(_writer, project, project.LatestTag, commitsAndFilesArgs, cancellationToken);
+                            using (_writer.Indent())
+                            {
+                                WriteCommitsAndFiles(_writer, project, project.LatestTag, 
+                                    commitsAndFilesArgs,
+                                    cancellationToken);
+                            }
+
+                            if (increment)
+                            {
+                                var response = prompter.PromptForValue("increment version? [major(j)>,minor(n),patch(p),skip(s)]", out bool isCancellationRequested);
+                                if (isCancellationRequested)
+                                {
+                                    return;
+                                }
+
+                                if (response.Equals("major", StringComparison.OrdinalIgnoreCase) || response.Equals("m", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    this.increment(project.Name, SemVerElement.major);
+                                }
+                                else if (response.Equals("minor", StringComparison.OrdinalIgnoreCase) || response.Equals("n", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    this.increment(project.Name, SemVerElement.minor);
+                                }
+                                else if (response.Equals("patch", StringComparison.OrdinalIgnoreCase) || response.Equals("p", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    this.increment(project.Name, SemVerElement.patch);
+                                }
+                            }
+
                         }
                     }
                 }
