@@ -9,6 +9,7 @@ using CommandDotNet.Rendering;
 using LibGit2Sharp;
 using MoreLinq.Extensions;
 using Pastel;
+using Semver;
 
 namespace mrGitTags
 {
@@ -43,8 +44,14 @@ namespace mrGitTags
             CancellationToken cancellationToken,
             ProjectsOptions projectsOptions,
             CommitsAndFilesArgs commitsAndFilesArgs,
-            [Option(ShortName = "i", LongName = "include-prereleases")] bool includePrereleases,
-            [Option(ShortName = "t", LongName = "tag-count")] int tagCount = 3)
+            [Option(ShortName = "i", LongName = "include-prereleases")] 
+            bool includePrereleases = false,
+            [Option(ShortName = "d", LongName = "depth", Description = "How many tags to show per project")] 
+            int tagCount = 3,
+            [Option(LongName = "ltev", Description = "show all tags less than or equal to the version")]
+            SemVersion skipToVersion = null,
+            [Option(LongName = "gtev", Description = "show all tags greater than or equal to the version")] 
+            SemVersion untilVersion = null)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
@@ -54,11 +61,23 @@ namespace mrGitTags
                 {
                     _writeln($"{project.Branch.FriendlyName.Theme_GitNameAlt()}");
 
+                    bool printedNextIfExists = false;
                     foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name)
                         .Where(t => !t.IsPrerelease || includePrereleases)
-                        .Take(tagCount)
+                        .SkipUntil(t => skipToVersion == null || t.SemVersion <= skipToVersion)
+                        .Take(untilVersion == null ? tagCount : int.MaxValue)
+                        .TakeWhile(t => untilVersion == null || t.SemVersion >= untilVersion)
                         .TakeUntil(_ => cancellationToken.IsCancellationRequested))
                     {
+                        if (!printedNextIfExists)
+                        {
+                            if (tagInfo.Next != null)
+                            {
+                                var nextTaggedCommit = _repo.Git.Lookup<Commit>(tagInfo.Next.Tag.Target.Id);
+                                _writeln($"{tagInfo.Next.FriendlyName.Theme_GitNameAlt()} {nextTaggedCommit.Committer.Theme_WhenDate()}  {nextTaggedCommit.Author.Theme_Name()}");
+                            }
+                            printedNextIfExists = true;
+                        }
                         using (_writer.Indent())
                         {
                             WriteCommitsAndFiles(_writer, project, tagInfo, commitsAndFilesArgs, cancellationToken);

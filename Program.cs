@@ -1,5 +1,7 @@
 ﻿using System;
 using CommandDotNet;
+using CommandDotNet.TypeDescriptors;
+using Semver;
 
 namespace mrGitTags
 {
@@ -7,16 +9,22 @@ namespace mrGitTags
     {
         static void Main(string[] args)
         {
-            var appRunner = new AppRunner<RepoApp>(
-                    new AppSettings
-                    {
-                        DefaultArgumentMode = ArgumentMode.Operand,
-                        Help =
-                        {
-                            ExpandArgumentsInUsage = true
-                        }
-                    })
+            var appSettings = new AppSettings
+            {
+                DefaultArgumentMode = ArgumentMode.Operand,
+                Help =
+                {
+                    ExpandArgumentsInUsage = true
+                }
+            };
+            var semVerDescriptor = new DelegatedTypeDescriptor<SemVersion>(
+                nameof(SemVersion), 
+                v => SemVersion.Parse(v));
+            appSettings.ArgumentTypeDescriptors.Add(semVerDescriptor);
+            
+            var appRunner = new AppRunner<RepoApp>(appSettings)
                 .UseDefaultMiddleware();
+                //.UseCommandLogger(includeAppConfig: true);
 
             try
             {
