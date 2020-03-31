@@ -80,6 +80,11 @@ namespace mrGitTags
             return newTag;
         }
 
+        public RepoUrl GetOriginRepoUrl()
+        {
+            return new RepoUrl(Git.Network.Remotes["origin"].Url);
+        }
+
         private Dictionary<string, List<TagInfo>> EnsureTags()
         {
             if (_tagsByProject == null)

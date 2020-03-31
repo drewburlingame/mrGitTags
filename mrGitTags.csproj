@@ -6,7 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandDotNet" Version="3.5.0" />
+    <PackageReference Include="CommandDotNet" Version="3.5.1" />
+    <PackageReference Include="CommandDotNet.NameCasing" Version="1.0.1" />
     <PackageReference Include="LibGit2Sharp" Version="0.26.2" />
     <PackageReference Include="morelinq" Version="3.3.2" />
     <PackageReference Include="Pastel" Version="1.3.1" />

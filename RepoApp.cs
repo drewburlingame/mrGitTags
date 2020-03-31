@@ -29,7 +29,7 @@ namespace mrGitTags
             _writer = new IndentableStreamWriter(console.Out);
             _writeln = _writer.WriteLine;
 
-            _repo = new Repo(options.RepoDirectory, options.Branch);
+            _repo = new Repo(options.RepoDir, options.Branch);
             return next();
         }
 
@@ -44,13 +44,13 @@ namespace mrGitTags
             CancellationToken cancellationToken,
             ProjectsOptions projectsOptions,
             CommitsAndFilesArgs commitsAndFilesArgs,
-            [Option(ShortName = "i", LongName = "include-prereleases")] 
+            [Option(ShortName = "i")] 
             bool includePrereleases = false,
             [Option(ShortName = "d", LongName = "depth", Description = "How many tags to show per project")] 
             int tagCount = 3,
             [Option(LongName = "ltev", Description = "show all tags less than or equal to the version")]
             SemVersion skipToVersion = null,
-            [Option(LongName = "gtev", Description = "show all tags greater than or equal to the version")] 
+            [Option(LongName = "gtv", Description = "show all tags greater than the version")] 
             SemVersion untilVersion = null)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
@@ -93,10 +93,10 @@ namespace mrGitTags
         [Command(Description = "create and push a tag for the next version of the project")]
         public void increment(
             [Operand(Name = "project", Description = "The id or name of the project")] string projectKey,
-            [Option(ShortName = "t", LongName = "type")] SemVerElement element = SemVerElement.patch)
+            [Option(ShortName = "t")] SemVerElement type = SemVerElement.patch)
         {
             var project = _repo.GetProjectOrDefault(projectKey) ?? throw new ArgumentException($"unknown project:{projectKey}");
-            var nextTag = project.Increment(element);
+            var nextTag = project.Increment(type);
             _writeln($"added {nextTag.FriendlyName}");
             _writeln("run the following command to push the tag to the remote");
             _writeln(null);
@@ -109,9 +109,8 @@ namespace mrGitTags
             CancellationToken cancellationToken,
             ProjectsOptions projectsOptions,
             CommitsAndFilesArgs commitsAndFilesArgs,
-            [Option(ShortName = "s", LongName = "summary-only", Description = "list only the project and change summary")] bool summaryOnly = false,
-            [Option(ShortName = "i", LongName = "interactive", Description = "prompt to increment version for each project with changes")] bool increment = false
-            )
+            [Option(ShortName = "s", Description = "list only the project and change summary")] bool summaryOnly = false,
+            [Option(ShortName = "i", Description = "prompt to increment version for each project with changes")] bool interactive = false)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
@@ -146,7 +145,7 @@ namespace mrGitTags
                                     cancellationToken);
                             }
 
-                            if (increment)
+                            if (interactive)
                             {
                                 var response = prompter.PromptForValue("increment version? [major(j)>,minor(n),patch(p),skip(s)]", out bool isCancellationRequested);
                                 if (isCancellationRequested)
@@ -174,7 +173,7 @@ namespace mrGitTags
             }
         }
 
-        private static void WriteCommitsAndFiles(IndentableStreamWriter writer, Project project, TagInfo tagInfo,
+        private void WriteCommitsAndFiles(IndentableStreamWriter writer, Project project, TagInfo tagInfo,
             CommitsAndFilesArgs args, CancellationToken cancellationToken)
         {
             var nextTagInfo = tagInfo.Next;
@@ -182,10 +181,14 @@ namespace mrGitTags
             var nextTarget = nextTagInfo?.Tag.Target ?? project.Tip;
 
             // https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection  #Commit Ranges
-            var commitRange = $"{tagInfo.FriendlyName}..{nextTagInfo?.FriendlyName ?? project.Branch.FriendlyName}";
+            var commitRange = $"{tagInfo.FriendlyName}...{nextTagInfo?.FriendlyName ?? project.Branch.FriendlyName}";
+
+            //https://github.com/bilal-fazlani/commanddotnet/compare/CommandDotNet_3.5.0...CommandDotNet_3.5.1
+            writer.WriteLine($"{_repo.GetOriginRepoUrl().HttpsUrl}/compare/{commitRange}".Theme_GitLinks());
 
             if (args.ShowCommits)
             {
+                writer.WriteLine($"git log --graph {commitRange} -- {project.Directory}".Theme_GitLinks());
                 writer.WriteLine($"git log --oneline --graph {commitRange} -- {project.Directory}".Theme_GitLinks());
 
                 foreach (var commit in project
@@ -201,6 +204,7 @@ namespace mrGitTags
             {
                 // https://stackoverflow.com/questions/1552340/how-to-list-only-the-file-names-that-changed-between-two-commits/6827937
 
+                writer.WriteLine($"git diff {commitRange} -- {project.Directory}".Theme_GitLinks());
                 writer.WriteLine($"git diff --name-status {commitRange} -- {project.Directory}".Theme_GitLinks());
 
                 foreach (var file in project.GetFilesChangedBetween(target, nextTarget))

@@ -1,5 +1,6 @@
 ﻿using System;
 using CommandDotNet;
+using CommandDotNet.NameCasing;
 using CommandDotNet.TypeDescriptors;
 using Semver;
 
@@ -12,6 +13,8 @@ namespace mrGitTags
             var appSettings = new AppSettings
             {
                 DefaultArgumentMode = ArgumentMode.Operand,
+                GuaranteeOperandOrderInArgumentModels = true,
+                LongNameAlwaysDefaultsToSymbolName = true,
                 Help =
                 {
                     ExpandArgumentsInUsage = true
@@ -23,8 +26,9 @@ namespace mrGitTags
             appSettings.ArgumentTypeDescriptors.Add(semVerDescriptor);
             
             var appRunner = new AppRunner<RepoApp>(appSettings)
-                .UseDefaultMiddleware();
-                //.UseCommandLogger(includeAppConfig: true);
+                .UseDefaultMiddleware()
+                .UseCommandLogger(includeAppConfig: true)
+                .UseNameCasing(Case.KebabCase);
 
             try
             {
