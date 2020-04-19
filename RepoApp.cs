@@ -100,7 +100,8 @@ namespace mrGitTags
             _writeln($"added {nextTag.FriendlyName}");
             _writeln("run the following command to push the tag to the remote");
             _writeln(null);
-            _writeln($"git push origin {nextTag.FriendlyName}".Theme_GitLinks());
+            var gitCommand = $"git push origin {nextTag.FriendlyName}";
+            _writeln(gitCommand.Theme_GitLinks());
         }
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]
@@ -109,11 +110,21 @@ namespace mrGitTags
             CancellationToken cancellationToken,
             ProjectsOptions projectsOptions,
             CommitsAndFilesArgs commitsAndFilesArgs,
+            [Option(ShortName = "m", Description = "show only projects with changes")] bool modifiedOnly = false,
             [Option(ShortName = "s", Description = "list only the project and change summary")] bool summaryOnly = false,
             [Option(ShortName = "i", Description = "prompt to increment version for each project with changes")] bool interactive = false)
         {
             foreach (var project in _repo.GetProjects(projectsOptions))
             {
+                var taggedCommit = project.LatestTaggedCommit;
+                var tip = project.Branch.Tip;
+                var changes = project.GetFilesChangedSinceLatestTag(tip).ToList();
+
+                if (modifiedOnly && !changes.Any())
+                {
+                    continue;
+                }
+
                 _writeln(null);
                 if (project.LatestTag == null)
                 {
@@ -121,10 +132,6 @@ namespace mrGitTags
                     continue;
                 }
 
-                var taggedCommit = project.LatestTaggedCommit;
-                var tip = project.Branch.Tip;
-
-                var changes = project.GetFilesChangedSinceLatestTag(tip).ToList();
 
                 _writeln($"{project.Theme_ProjectIndexAndName()}: {changes.Summary()}");
                 if (!summaryOnly)
@@ -153,7 +160,7 @@ namespace mrGitTags
                                     return;
                                 }
 
-                                if (response.Equals("major", StringComparison.OrdinalIgnoreCase) || response.Equals("m", StringComparison.OrdinalIgnoreCase))
+                                if (response.Equals("major", StringComparison.OrdinalIgnoreCase) || response.Equals("j", StringComparison.OrdinalIgnoreCase))
                                 {
                                     this.increment(project.Name, SemVerElement.major);
                                 }
