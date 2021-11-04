@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CliWrap;
 using CommandDotNet;
-using CommandDotNet.Prompts;
-using CommandDotNet.Rendering;
 using LibGit2Sharp;
 using MoreLinq.Extensions;
 using Pastel;
 using Semver;
+using Spectre.Console;
+using Color = System.Drawing.Color;
 
 namespace mrGitTags
 {
@@ -19,21 +17,24 @@ namespace mrGitTags
         private Repo _repo;
         private IndentableStreamWriter _writer;
         private Action<string> _writeln;
-        private IConsole _console;
+        private IAnsiConsole _console;
         private CancellationToken _cancellationToken;
+        private CliWrapper _cliWrapper;
 
         public Task<int> Intercept(
             InterceptorExecutionDelegate next,
             RepoAppOptions options,
-            IConsole console,
+            CommandContext commandContext,
+            IAnsiConsole console,
             CancellationToken cancellationToken)
         {
             _console = console;
             _cancellationToken = cancellationToken;
-            _writer = new IndentableStreamWriter(console.Out);
+            _writer = new IndentableStreamWriter(console.WriteLine);
             _writeln = _writer.WriteLine;
 
             _repo = new Repo(options.RepoDir, options.Branch);
+            _cliWrapper = new CliWrapper(commandContext);
             return next();
         }
 
@@ -107,13 +108,7 @@ namespace mrGitTags
             if (pushTagsToRemote)
             {
                 _writeln($"pushing {nextTag.FriendlyName} to remote");
-                Cli.Wrap("git")
-                    .WithArguments($"push origin {nextTag.FriendlyName}")
-                    .WithWorkingDirectory(Environment.CurrentDirectory)
-                    .WithStandardOutputPipe(PipeTarget.ToDelegate(_console.WriteLine))
-                    .WithStandardErrorPipe(PipeTarget.ToDelegate(_console.Error.WriteLine))
-                    .WithValidation(CommandResultValidation.None)
-                    .ExecuteAsync(_cancellationToken).Task.Wait(_cancellationToken);
+                _cliWrapper.Execute("git", $"push origin {nextTag.FriendlyName}");
             }
             else
             {
@@ -125,7 +120,6 @@ namespace mrGitTags
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]
         public void status(
-            IPrompter prompter,
             ProjectsOperand projectsOperand,
             CommitsAndFilesArgs commitsAndFilesArgs,
             [Option(ShortName = "m", Description = "show only projects with changes")] bool modifiedOnly = false,
@@ -174,8 +168,8 @@ namespace mrGitTags
 
                             if (interactive)
                             {
-                                var response = prompter.PromptForValue("increment version? [major(j)>,minor(n),patch(p),skip(s)]", out bool isCancellationRequested);
-                                if (isCancellationRequested)
+                                var response = _console.Ask<string>("increment version? [major(j)>,minor(n),patch(p),skip(s)]");
+                                if (string.IsNullOrWhiteSpace(response))
                                 {
                                     return;
                                 }

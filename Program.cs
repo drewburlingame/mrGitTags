@@ -1,6 +1,7 @@
 ﻿using System;
 using CommandDotNet;
 using CommandDotNet.NameCasing;
+using CommandDotNet.Spectre;
 using CommandDotNet.TypeDescriptors;
 using Semver;
 
@@ -36,6 +37,8 @@ namespace mrGitTags
 
             return new AppRunner<RepoApp>(appSettings)
                 .UseDefaultMiddleware()
+                .UseSpectreAnsiConsole()
+                .UseSpectreArgumentPrompter()
                 .UseCommandLogger(includeAppConfig: true)
                 .UseNameCasing(Case.KebabCase)
                 .UseErrorHandler((ctx, ex) =>

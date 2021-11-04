@@ -6,12 +6,18 @@ namespace mrGitTags
 {
     public class IndentableStreamWriter 
     {
-        private readonly IStandardStreamWriter _writer;
+        private readonly Action<string> _writeLine;
         private Indent _indent;
 
         public IndentableStreamWriter(IStandardStreamWriter writer, Indent indent = null)
+        : this(writer.WriteLine, indent)
         {
-            _writer = writer;
+        }
+
+
+        public IndentableStreamWriter(Action<string> writeLine, Indent indent = null)
+        {
+            _writeLine = writeLine;
             _indent = indent ??= new Indent();
         }
 
@@ -21,6 +27,6 @@ namespace mrGitTags
             return new DisposableAction(() => _indent = _indent.Decrement);
         }
 
-        public void WriteLine(string text) => _writer.WriteLine($"{_indent}{text}");
+        public void WriteLine(string text) => _writeLine($"{_indent}{text}");
     }
 }
