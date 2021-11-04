@@ -18,6 +18,7 @@ namespace mrGitTags
 
         public Branch Branch { get; }
         public Commit Tip => Branch.Tip;
+        public Commit FirstCommmit => Git.Commits.Last();
 
         public Repo(string directory, string branch)
         {
@@ -41,23 +42,28 @@ namespace mrGitTags
             return EnsureProjects().ToList();
         }
 
-        internal IList<Project> GetProjects(ProjectsOptions projectsOptions)
+        internal IList<Project> GetProjects(ProjectsOperand projectsOperand)
         {
-            if (!projectsOptions.Projects.Any())
+            if (!projectsOperand.Projects.Any())
             {
                 return GetProjects();
             }
 
             return EnsureProjects()
-                .Where(p => BuildKeys(p).Any(k => 
-                    projectsOptions.Projects.Any(pk => pk == k)))
+                .Where(p => 
+                    projectsOperand.Projects.Any(pk => IsKeyFor(pk, p)))
                 .ToList();
         }
 
         internal Project GetProjectOrDefault(string projectKey)
         {
             return EnsureProjects()
-                .SingleOrDefault(p => BuildKeys(p).Any(k => k == projectKey));
+                .SingleOrDefault(p => IsKeyFor(projectKey, p));
+        }
+
+        private static bool IsKeyFor(string projectKey, Project project)
+        {
+            return BuildKeys(project).Any(k => k == projectKey);
         }
 
         private static IEnumerable<string> BuildKeys(Project project)
@@ -69,16 +75,6 @@ namespace mrGitTags
 
         public List<TagInfo> GetTagsOrEmpty(string projectName) => 
             EnsureTags().GetValueOrDefault(projectName) ?? new List<TagInfo>();
-
-        public bool TryGetTags(string projectName, out List<TagInfo> tagInfos) => 
-            EnsureTags().TryGetValue(projectName, out tagInfos);
-
-        public Tag ApplyAndPush(string tagName, Commit commit)
-        {
-            var newTag = Git.ApplyTag(tagName, commit.Sha);
-            Git.Network.Push(Git.Network.Remotes["origin"], newTag.CanonicalName);
-            return newTag;
-        }
 
         public RepoUrl GetOriginRepoUrl()
         {

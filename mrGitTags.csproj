@@ -3,15 +3,18 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandDotNet" Version="3.6.2" />
-    <PackageReference Include="CommandDotNet.NameCasing" Version="1.0.1" />
+    <PackageReference Include="CliWrap" Version="3.3.3" />
+    <PackageReference Include="CommandDotNet" Version="4.2.2" />
+    <PackageReference Include="CommandDotNet.NameCasing" Version="2.0.0" />
     <PackageReference Include="LibGit2Sharp" Version="0.26.2" />
     <PackageReference Include="morelinq" Version="3.3.2" />
-    <PackageReference Include="Pastel" Version="1.3.1" />
+    <PackageReference Include="Pastel" Version="2.1.0" />
     <PackageReference Include="Semver" Version="2.0.6" />
+    <PackageReference Include="Spectre.Console" Version="0.42.0" />
   </ItemGroup>
 
 </Project>

@@ -10,35 +10,39 @@ namespace mrGitTags
     {
         static void Main(string[] args)
         {
-            var appSettings = new AppSettings
-            {
-                DefaultArgumentMode = ArgumentMode.Operand,
-                GuaranteeOperandOrderInArgumentModels = true,
-                LongNameAlwaysDefaultsToSymbolName = true,
-                Help =
-                {
-                    ExpandArgumentsInUsage = true
-                }
-            };
-            var semVerDescriptor = new DelegatedTypeDescriptor<SemVersion>(
-                nameof(SemVersion), 
-                v => SemVersion.Parse(v));
-            appSettings.ArgumentTypeDescriptors.Add(semVerDescriptor);
-            
-            var appRunner = new AppRunner<RepoApp>(appSettings)
-                .UseDefaultMiddleware()
-                .UseCommandLogger(includeAppConfig: true)
-                .UseNameCasing(Case.KebabCase);
-
             try
             {
+                var appRunner = BuildAppRunner();
                 appRunner.Run(args);
             }
-            catch (ArgumentException e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
-                Environment.ExitCode = -1;
+                Environment.ExitCode = 1;
             }
+        }
+
+        private static AppRunner BuildAppRunner()
+        {
+            var appSettings = new AppSettings
+            {
+                ArgumentTypeDescriptors =
+                {
+                    new DelegatedTypeDescriptor<SemVersion>(
+                        nameof(SemVersion),
+                        v => SemVersion.Parse(v, strict: true))
+                }
+            };
+
+            return new AppRunner<RepoApp>(appSettings)
+                .UseDefaultMiddleware()
+                .UseCommandLogger(includeAppConfig: true)
+                .UseNameCasing(Case.KebabCase)
+                .UseErrorHandler((ctx, ex) =>
+                {
+                    ctx.Console.Error.WriteLine(ex);
+                    return 1;
+                });
         }
     }
 }

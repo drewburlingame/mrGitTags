@@ -12,7 +12,7 @@ namespace mrGitTags
 
         public static string Theme_GitName(this string text) => text?.Pastel(Color.Cyan);
         public static string Theme_GitNameAlt(this string text) => text?.Pastel(Color.GhostWhite);
-        public static string Theme_GitLinks(this string text) => text?.Pastel(Color.LightGreen);
+        public static string Theme_GitLinks(this string text) => text?.Pastel(Color.Violet);
         public static string Theme_GitMessage(this string text) => text.Pastel(text.StartsWith("Merge") ? Color.Yellow : Color.White);
 
         public static string Theme_Name(this Signature signature) => signature.Name.Pastel(Color.DarkCyan);
@@ -41,7 +41,7 @@ namespace mrGitTags
             {
                 case ChangeKind.Added:
                 case ChangeKind.Copied:
-                    return Color.Green;
+                    return Color.LightGreen;
                 case ChangeKind.Deleted:
                     return Color.Red;
                 default:

@@ -11,7 +11,6 @@ namespace mrGitTags
 {
     public class Project
     {
-        private readonly Repo _repo;
         private readonly List<TagInfo> _tags;
 
         private Commit _latestTaggedCommit;
@@ -23,13 +22,15 @@ namespace mrGitTags
 
         public TagInfo LatestTag => _tags.FirstOrDefault();
 
-        public Branch Branch => _repo.Branch;
+        // todo: these properties don't belong here
+        public Repo Repo { get; }
+        public Branch Branch => Repo.Branch;
         public Commit Tip => Branch.Tip;
 
         public Commit LatestTaggedCommit => _latestTaggedCommit
             ??= LatestTag == null
                 ? null
-                : _repo.Git.Lookup<Commit>(LatestTag.Tag.Target.Sha);
+                : Repo.Git.Lookup<Commit>(LatestTag.Tag.Target.Sha);
 
         public Project(Repo repo, string projectFile)
             : this(repo,
@@ -41,7 +42,7 @@ namespace mrGitTags
 
         private Project(Repo repo, string name, string projectFile, string directory)
         {
-            _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+            Repo = repo ?? throw new ArgumentNullException(nameof(repo));
             Name = name ?? throw new ArgumentNullException(nameof(name));
             ProjectFile = projectFile ?? throw new ArgumentNullException(nameof(projectFile));
             Directory = directory ?? throw new ArgumentNullException(nameof(directory));
@@ -52,7 +53,7 @@ namespace mrGitTags
         public TagInfo Increment(SemVerElement element)
         {
             var nextVersion = Increment(LatestTag, element);
-            var newTag = _repo.Git.ApplyTag($"{Name}_{nextVersion}", Tip.Sha);
+            var newTag = Repo.Git.ApplyTag($"{Name}_{nextVersion}", Tip.Sha);
             var newTagInfo = TagInfo.ParseOrDefault(newTag);
             _tags.Insert(0, newTagInfo);
             return newTagInfo;
@@ -76,7 +77,7 @@ namespace mrGitTags
 
         public List<Commit> GetCommitsBetween(GitObject fromOldest, GitObject toNewest, CancellationToken cancellationToken)
         {
-            var commits = _repo.Git.Commits
+            var commits = Repo.Git.Commits
                 .QueryBy(new CommitFilter
                 {
                     IncludeReachableFrom = toNewest.Sha,
@@ -89,21 +90,16 @@ namespace mrGitTags
 
         public ICollection<TreeEntryChanges> GetFilesChangedSinceLatestTag(Commit latestCommit = null)
         {
-            if (LatestTaggedCommit == null)
-            {
-                return new List<TreeEntryChanges>();
-            }
-
             latestCommit ??= Tip;
-            return GetFilesChangedBetween(LatestTaggedCommit, latestCommit);
+            return GetFilesChangedBetween(LatestTaggedCommit ?? Repo.Git.Commits.Last(), latestCommit);
         }
 
         public List<TreeEntryChanges> GetFilesChangedBetween(GitObject fromOldest, GitObject toNewest)
         {
-            var commitFrom = _repo.Git.Lookup<Commit>(fromOldest.Sha);
-            var commitTo = _repo.Git.Lookup<Commit>(toNewest.Sha);
+            var commitFrom = Repo.Git.Lookup<Commit>(fromOldest.Sha);
+            var commitTo = Repo.Git.Lookup<Commit>(toNewest.Sha);
 
-            var changes = _repo.Git.Diff.Compare<TreeChanges>(commitFrom.Tree, commitTo.Tree);
+            var changes = Repo.Git.Diff.Compare<TreeChanges>(commitFrom.Tree, commitTo.Tree);
             return FilterForProject(changes).ToList();
         }
 
@@ -111,7 +107,7 @@ namespace mrGitTags
         {
             foreach (var commit in commits.TakeUntil(_ => cancellationToken.IsCancellationRequested))
             {
-                var changes = _repo.Git.Diff.Compare<TreeChanges>(commit.Parents.First().Tree, commit.Tree);
+                var changes = Repo.Git.Diff.Compare<TreeChanges>(commit.Parents.First().Tree, commit.Tree);
                 if (FilterForProject(changes).Any())
                 {
                     yield return commit;
@@ -134,7 +130,7 @@ namespace mrGitTags
             {
                 return new List<PatchEntryChanges>();
             }
-            var changes = _repo.Git.Diff.Compare<Patch>(LatestTaggedCommit.Tree, latestCommit.Tree);
+            var changes = Repo.Git.Diff.Compare<Patch>(LatestTaggedCommit.Tree, latestCommit.Tree);
             return changes
                 .Where(c => c.Status.HasSemanticMeaning())
                 .Where(c =>
