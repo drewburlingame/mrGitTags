@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
+using CommandDotNet.Prompts;
 using LibGit2Sharp;
 using MoreLinq.Extensions;
 using Pastel;
@@ -120,6 +121,7 @@ namespace mrGitTags
 
         [Command(Description = "Status each project for since the last tag of each project to the head of the current branch.")]
         public void status(
+            IPrompter prompter,
             ProjectsOperand projectsOperand,
             CommitsAndFilesArgs commitsAndFilesArgs,
             [Option(ShortName = "m", Description = "show only projects with changes")] bool modifiedOnly = false,
@@ -168,8 +170,8 @@ namespace mrGitTags
 
                             if (interactive)
                             {
-                                var response = _console.Ask<string>("increment version? [major(j)>,minor(n),patch(p),skip(s)]");
-                                if (string.IsNullOrWhiteSpace(response))
+                                var response = prompter.PromptForValue("increment version? [major(j)>,minor(n),patch(p),skip(s)]", out bool isCancellationRequested);
+                                if (isCancellationRequested)
                                 {
                                     return;
                                 }

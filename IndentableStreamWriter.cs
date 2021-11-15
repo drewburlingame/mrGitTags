@@ -1,6 +1,5 @@
 ﻿using System;
-using CommandDotNet;
-using CommandDotNet.Rendering;
+using System.IO;
 
 namespace mrGitTags
 {
@@ -9,11 +8,10 @@ namespace mrGitTags
         private readonly Action<string> _writeLine;
         private Indent _indent;
 
-        public IndentableStreamWriter(IStandardStreamWriter writer, Indent indent = null)
+        public IndentableStreamWriter(TextWriter writer, Indent indent = null)
         : this(writer.WriteLine, indent)
         {
         }
-
 
         public IndentableStreamWriter(Action<string> writeLine, Indent indent = null)
         {

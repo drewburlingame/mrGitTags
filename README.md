@@ -11,7 +11,9 @@ The [CommandDotNet](https://github.com/bilal-fazlani/commanddotnet/) repo publis
 Tags are used to assign semantic versions to a project, using the format {project_name}_{semver}. 
 The CI service triggers a build to deploy a package when a new tag is pushed.
 
-After a few PRs are merged, I generally know which packages I need to increment for semver, but I always end up comparing changes in the different projects since the last tag to see if I missed something.  It's a bit mind-numbing and thus error-prone so I threw together this tool to make it simpler for me.
+After a few PRs are merged, I generally know which packages I need to increment for semver,
+but I always end up comparing changes in the different projects since the last tag to see if I missed something.
+It's a bit mind-numbing and thus error-prone so I threw together this tool to make it simpler.
 
 It was also another opportunity to dog-food CommandDotNet
 

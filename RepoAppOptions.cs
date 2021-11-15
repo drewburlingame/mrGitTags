@@ -5,11 +5,23 @@ namespace mrGitTags
 {
     public class RepoAppOptions : IArgumentModel
     {
+        private Repo _repo = new(Directory.GetCurrentDirectory(), "current");
+
         [Option]
-        public string RepoDir { get; set; } = Directory.GetCurrentDirectory();
+        public string RepoDir
+        {
+            get => _repo.Dir;
+            set => _repo = new Repo(value, _repo.Branch.FriendlyName);
+        }
 
         [Option(ShortName = "b",
-            Description = "The branch to use as head. Use `-b current` or `-b !` to use the current branch.")]
-        public string Branch { get; set; } = "master";
+            Description = "The branch to use as head")]
+        public string Branch
+        {
+            get => _repo.Branch.FriendlyName; 
+            set => _repo = new Repo(_repo.Dir, value);
+        }
+
+        public Repo Repo() => _repo;
     }
 }

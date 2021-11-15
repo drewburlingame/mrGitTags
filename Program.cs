@@ -38,7 +38,8 @@ namespace mrGitTags
             return new AppRunner<RepoApp>(appSettings)
                 .UseDefaultMiddleware()
                 .UseSpectreAnsiConsole()
-                .UseSpectreArgumentPrompter()
+                .UsePrompter()
+                .UseArgumentPrompter()
                 .UseCommandLogger(includeAppConfig: true)
                 .UseNameCasing(Case.KebabCase)
                 .UseErrorHandler((ctx, ex) =>
