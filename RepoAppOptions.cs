@@ -14,7 +14,7 @@ namespace mrGitTags
             set => _repo = new Repo(value, _repo.Branch.FriendlyName);
         }
 
-        [Option(ShortName = "b",
+        [Option('b',
             Description = "The branch to use as head")]
         public string Branch
         {

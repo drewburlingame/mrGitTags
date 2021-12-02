@@ -8,9 +8,9 @@
 
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.3.3" />
-    <PackageReference Include="CommandDotNet" Version="5.0.1" />
+    <PackageReference Include="CommandDotNet" Version="6.0.0" />
     <PackageReference Include="CommandDotNet.NameCasing" Version="3.0.1" />
-    <PackageReference Include="CommandDotNet.Spectre" Version="2.0.1" />
+    <PackageReference Include="CommandDotNet.Spectre" Version="2.0.2" />
     <PackageReference Include="LibGit2Sharp" Version="0.26.2" />
     <PackageReference Include="morelinq" Version="3.3.2" />
     <PackageReference Include="Pastel" Version="2.1.0" />

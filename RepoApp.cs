@@ -49,13 +49,13 @@ namespace mrGitTags
         public void tags(
             CommitsAndFilesArgs commitsAndFilesArgs,
             ProjectsOperand projectsOperand,
-            [Option(ShortName = "i")] 
+            [Option('i')] 
             bool includePrereleases = false,
-            [Option(ShortName = "d", LongName = "depth", Description = "How many tags to show per project")] 
+            [Option('d', "depth", Description = "How many tags to show per project")] 
             int tagCount = 3,
-            [Option(LongName = "lte", Description = "show all tags less than or equal to the version")]
+            [Option("lte", Description = "show all tags less than or equal to the version")]
             SemVersion? skipToVersion = null,
-            [Option(LongName = "gt", Description = "show all tags greater than the version")] 
+            [Option("gt", Description = "show all tags greater than the version")] 
             SemVersion? untilVersion = null)
         {
             foreach (var project in _repo.GetProjects(projectsOperand))
@@ -97,9 +97,9 @@ namespace mrGitTags
 
         [Command(Description = "create and push a tag for the next version of the project")]
         public void increment(
-            [Operand(Name = "project", Description = "The id or name of the project")] string project,
-            [Option(ShortName = "t")] SemVerElement type = SemVerElement.patch,
-            [Option(ShortName = "p")] bool pushTagsToRemote = false)
+            [Operand("project", Description = "The id or name of the project")] string project,
+            [Option('t')] SemVerElement type = SemVerElement.patch,
+            [Option('p')] bool pushTagsToRemote = false)
         {
             // TODO: use spectre to prompt for project.
 
@@ -124,10 +124,10 @@ namespace mrGitTags
             IPrompter prompter,
             ProjectsOperand projectsOperand,
             CommitsAndFilesArgs commitsAndFilesArgs,
-            [Option(ShortName = "m", Description = "show only projects with changes")] bool modifiedOnly = false,
-            [Option(ShortName = "s", Description = "list only the project and change summary")] bool summaryOnly = false,
-            [Option(ShortName = "i", Description = "prompt to increment version for each project with changes")] bool interactive = false,
-            [Option(ShortName = "p")] bool pushTagsToRemote = false)
+            [Option('m', Description = "show only projects with changes")] bool modifiedOnly = false,
+            [Option('s', Description = "list only the project and change summary")] bool summaryOnly = false,
+            [Option('i', Description = "prompt to increment version for each project with changes")] bool interactive = false,
+            [Option('p')] bool pushTagsToRemote = false)
         {
             // TODO: use spectre to write the table.
             foreach (var project in _repo.GetProjects(projectsOperand))
