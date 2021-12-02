@@ -15,12 +15,12 @@ namespace mrGitTags
 {
     public class RepoApp
     {
-        private Repo _repo;
-        private IndentableStreamWriter _writer;
-        private Action<string> _writeln;
-        private IAnsiConsole _console;
+        private Repo _repo = null!;
+        private IndentableStreamWriter _writer = null!;
+        private Action<string?> _writeln = null!;
+        private IAnsiConsole _console = null!;
         private CancellationToken _cancellationToken;
-        private CliWrapper _cliWrapper;
+        private CliWrapper _cliWrapper = null!;
 
         public Task<int> Intercept(
             InterceptorExecutionDelegate next,
@@ -132,7 +132,6 @@ namespace mrGitTags
             // TODO: use spectre to write the table.
             foreach (var project in _repo.GetProjects(projectsOperand))
             {
-                var taggedCommit = project.LatestTaggedCommit;
                 var tip = project.Branch.Tip;
                 var changes = project.GetFilesChangedSinceLatestTag(tip).ToList();
 
@@ -155,6 +154,7 @@ namespace mrGitTags
 
                         if (project.LatestTag is not null)
                         {
+                            var taggedCommit = project.LatestTaggedCommit!;
                             _writeln($"tag   : {taggedCommit.Committer.Theme_WhenDateTime()} {project.LatestTag.Tag.FriendlyName.Theme_GitName()} {taggedCommit.Author.Theme_Name()}");
                             _writeln($"        {taggedCommit.MessageShort}");
                         }
@@ -170,8 +170,10 @@ namespace mrGitTags
 
                             if (interactive)
                             {
-                                var response = prompter.PromptForValue("increment version? [major(j)>,minor(n),patch(p),skip(s)]", out bool isCancellationRequested);
-                                if (isCancellationRequested)
+                                var response = prompter.PromptForValue(
+                                    "increment version? [major(j)>,minor(n),patch(p),skip(s)]", 
+                                    out bool isCancellationRequested);
+                                if (isCancellationRequested || response is null)
                                 {
                                     return;
                                 }

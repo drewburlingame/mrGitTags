@@ -10,8 +10,8 @@ namespace mrGitTags
 {
     public class Repo
     {
-        private List<Project> _projects;
-        private Dictionary<string, List<TagInfo>> _tagsByProject;
+        private List<Project>? _projects;
+        private Dictionary<string, List<TagInfo>>? _tagsByProject;
 
         public string Dir { get; }
         public Repository Git { get; }
@@ -55,7 +55,7 @@ namespace mrGitTags
                 .ToList();
         }
 
-        internal Project GetProjectOrDefault(string projectKey)
+        internal Project? GetProjectOrDefault(string projectKey)
         {
             return EnsureProjects()
                 .SingleOrDefault(p => IsKeyFor(projectKey, p));
@@ -87,7 +87,8 @@ namespace mrGitTags
             {
                 _tagsByProject = Git.Tags
                     .Select(TagInfo.ParseOrDefault)
-                    .Where(tag => tag != null)
+                    .Where(tag => tag is not null)
+                    .Cast<TagInfo>()
                     .GroupBy(tag => tag.Name)
                     .ToDictionary(
                         g => g.Key,

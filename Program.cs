@@ -44,7 +44,7 @@ namespace mrGitTags
                 .UseNameCasing(Case.KebabCase)
                 .UseErrorHandler((ctx, ex) =>
                 {
-                    ctx.Console.Error.WriteLine(ex);
+                    ctx?.Console.Error.WriteLine(ex);
                     return 1;
                 });
         }

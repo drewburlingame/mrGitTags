@@ -8,11 +8,11 @@ namespace mrGitTags
     public static class ThemeExtensions
     {
         public static string Theme_ProjectIndexAndName(this Project project) =>
-            $"{$"#{project.Index}".PadLeft(2)} {project.Name}".Pastel(Color.Cyan);
+            $"{$"#{project.Index}",2} {project.Name}".Pastel(Color.Cyan);
 
-        public static string Theme_GitName(this string text) => text?.Pastel(Color.Cyan);
-        public static string Theme_GitNameAlt(this string text) => text?.Pastel(Color.GhostWhite);
-        public static string Theme_GitLinks(this string text) => text?.Pastel(Color.Violet);
+        public static string? Theme_GitName(this string? text) => text?.Pastel(Color.Cyan);
+        public static string? Theme_GitNameAlt(this string? text) => text?.Pastel(Color.GhostWhite);
+        public static string? Theme_GitLinks(this string? text) => text?.Pastel(Color.Violet);
         public static string Theme_GitMessage(this string text) => text.Pastel(text.StartsWith("Merge") ? Color.Yellow : Color.White);
 
         public static string Theme_Name(this Signature signature) => signature.Name.Pastel(Color.DarkCyan);

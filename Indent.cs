@@ -7,8 +7,8 @@ namespace mrGitTags
     /// </summary>
     public class Indent
     {
-        private readonly Indent _previousDepth;
-        private Indent _nextDepth;
+        private readonly Indent? _previousDepth;
+        private Indent? _nextDepth;
 
         /// <summary>The value of a single indent</summary>
         public string SingleIndent { get; }

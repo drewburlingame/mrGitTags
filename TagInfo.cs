@@ -1,4 +1,5 @@
-﻿using LibGit2Sharp;
+﻿using System;
+using LibGit2Sharp;
 using Semver;
 
 namespace mrGitTags
@@ -15,8 +16,8 @@ namespace mrGitTags
 
         public string ShortSha => Tag.Target.ShortSha();
 
-        public TagInfo Previous { get; set; }
-        public TagInfo Next { get; set; }
+        public TagInfo? Previous { get; set; }
+        public TagInfo? Next { get; set; }
 
         private TagInfo(string name, SemVersion semVersion, Tag tag)
         {
@@ -25,7 +26,13 @@ namespace mrGitTags
             Tag = tag;
         }
 
-        public static TagInfo ParseOrDefault(Tag tag)
+        public static TagInfo ParseOrThrow(Tag tag)
+        {
+            return ParseOrDefault(tag) ??
+                   throw new InvalidOperationException($"Unable to parse tag: {tag}");
+        }
+
+        public static TagInfo? ParseOrDefault(Tag tag)
         {
             var parts = tag.FriendlyName.Split("_");
             if (parts.Length != 2)

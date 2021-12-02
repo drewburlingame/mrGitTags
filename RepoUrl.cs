@@ -4,16 +4,19 @@ namespace mrGitTags
 {
     public class RepoUrl
     {
-        public string HttpsUrl { get; }
-        public string RemoteProjectPath { get; }
+        public string? HttpsUrl { get; }
+        public string? RemoteProjectPath { get; }
 
         public RepoUrl(string repoOriginUrl)
         {
             RemoteProjectPath = GetProjectNameFromRemoteUrl(repoOriginUrl);
-            HttpsUrl = GetHttpsUrl(repoOriginUrl, RemoteProjectPath);
+            if (RemoteProjectPath is not null)
+            {
+                HttpsUrl = GetHttpsUrl(repoOriginUrl, RemoteProjectPath);
+            }
         }
 
-        private static string GetHttpsUrl(string repoOriginUrl, string projectName)
+        private static string? GetHttpsUrl(string repoOriginUrl, string projectName)
         {
             var isGitHub = repoOriginUrl.Contains("github.com");
             return isGitHub
@@ -21,7 +24,7 @@ namespace mrGitTags
                 : null;
         }
 
-        private static string GetProjectNameFromRemoteUrl(string repoOriginUrl)
+        private static string? GetProjectNameFromRemoteUrl(string repoOriginUrl)
         {
             var isSsh = repoOriginUrl.StartsWith("git@");
             if (isSsh)

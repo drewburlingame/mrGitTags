@@ -13,21 +13,21 @@ namespace mrGitTags
     {
         private readonly List<TagInfo> _tags;
 
-        private Commit _latestTaggedCommit;
+        private Commit? _latestTaggedCommit;
 
         public int Index { get; set; }
         public string Name { get; }
         public string ProjectFile { get; }
         public string Directory { get; }
 
-        public TagInfo LatestTag => _tags.FirstOrDefault();
+        public TagInfo? LatestTag => _tags.FirstOrDefault();
 
         // todo: these properties don't belong here
         public Repo Repo { get; }
         public Branch Branch => Repo.Branch;
         public Commit Tip => Branch.Tip;
 
-        public Commit LatestTaggedCommit => _latestTaggedCommit
+        public Commit? LatestTaggedCommit => _latestTaggedCommit
             ??= LatestTag == null
                 ? null
                 : Repo.Git.Lookup<Commit>(LatestTag.Tag.Target.Sha);
@@ -54,12 +54,12 @@ namespace mrGitTags
         {
             var nextVersion = Increment(LatestTag, element);
             var newTag = Repo.Git.ApplyTag($"{Name}_{nextVersion}", Tip.Sha);
-            var newTagInfo = TagInfo.ParseOrDefault(newTag);
+            var newTagInfo = TagInfo.ParseOrThrow(newTag);
             _tags.Insert(0, newTagInfo);
             return newTagInfo;
         }
 
-        private SemVersion Increment(TagInfo tagInfo, SemVerElement type)
+        private SemVersion Increment(TagInfo? tagInfo, SemVerElement type)
         {
             var semver = tagInfo?.SemVersion ?? new SemVersion(0,0,0);
             switch (type)
@@ -88,7 +88,7 @@ namespace mrGitTags
             return FilterForProject(commits, cancellationToken).ToList();
         }
 
-        public ICollection<TreeEntryChanges> GetFilesChangedSinceLatestTag(Commit latestCommit = null)
+        public ICollection<TreeEntryChanges> GetFilesChangedSinceLatestTag(Commit? latestCommit = null)
         {
             latestCommit ??= Tip;
             return GetFilesChangedBetween(LatestTaggedCommit ?? Repo.Git.Commits.Last(), latestCommit);
