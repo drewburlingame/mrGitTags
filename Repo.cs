@@ -18,7 +18,7 @@ namespace mrGitTags
 
         public Branch Branch { get; }
         public Commit Tip => Branch.Tip;
-        public Commit FirstCommmit => Git.Commits.Last();
+        public Commit FirstCommit => Git.Commits.Last();
 
         public Repo(string directory, string branch)
         {
@@ -86,7 +86,7 @@ namespace mrGitTags
             if (_tagsByProject == null)
             {
                 _tagsByProject = Git.Tags
-                    .Select(TagInfo.ParseOrDefault)
+                    .Select(tag => TagInfo.ParseOrDefault(this, tag))
                     .Where(tag => tag is not null)
                     .Cast<TagInfo>()
                     .GroupBy(tag => tag.Name)

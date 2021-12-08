@@ -25,7 +25,7 @@ namespace mrGitTags
         {
             var path = change.Path == change.OldPath ? change.Path : $"{change.OldPath} > {change.Path}";
             var color = change.Status.Theme_Change();
-            return $"{change.Status.ToString().PadLeft(11)} : {path}".Pastel(color);
+            return $"{change.Status,11} : {path}".Pastel(color);
         }
 
         public static string Theme_Change(this int changeCount, ChangeKind changeKind)

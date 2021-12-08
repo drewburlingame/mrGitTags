@@ -48,9 +48,8 @@ namespace mrGitTags
         [Command(Description = "list all tags for the given project(s)")]
         public void tags(
             CommitsAndFilesArgs commitsAndFilesArgs,
+            TagsArgs tagsArgs,
             ProjectsOperand projectsOperand,
-            [Option('i')] 
-            bool includePrereleases = false,
             [Option('d', "depth", Description = "How many tags to show per project")] 
             int tagCount = 3,
             [Option("lte", Description = "show all tags less than or equal to the version")]
@@ -67,8 +66,8 @@ namespace mrGitTags
                     _writeln($"{project.Branch.FriendlyName.Theme_GitNameAlt()}");
 
                     bool printedNextIfExists = false;
-                    foreach (var tagInfo in _repo.GetTagsOrEmpty(project.Name)
-                        .Where(t => !t.IsPrerelease || includePrereleases)
+                    foreach (var tagInfo in project.Tags
+                        .Where(t => !t.IsPrerelease || tagsArgs.IncludePrereleases)
                         .SkipUntil(t => skipToVersion == null || t.SemVersion <= skipToVersion)
                         .Take(untilVersion == null ? tagCount : int.MaxValue)
                         .TakeWhile(t => untilVersion == null || t.SemVersion >= untilVersion)
@@ -85,7 +84,7 @@ namespace mrGitTags
                         }
                         using (_writer.Indent())
                         {
-                            WriteCommitsAndFiles(project, tagInfo, commitsAndFilesArgs, _cancellationToken);
+                            WriteCommitsAndFiles(project, tagInfo, commitsAndFilesArgs, tagsArgs, _cancellationToken);
                         }
 
                         var taggedCommit = _repo.Git.Lookup<Commit>(tagInfo.Tag.Target.Id);
@@ -124,6 +123,7 @@ namespace mrGitTags
             IPrompter prompter,
             ProjectsOperand projectsOperand,
             CommitsAndFilesArgs commitsAndFilesArgs,
+            TagsArgs tagsArgs,
             [Option('m', Description = "show only projects with changes")] bool modifiedOnly = false,
             [Option('s', Description = "list only the project and change summary")] bool summaryOnly = false,
             [Option('i', Description = "prompt to increment version for each project with changes")] bool interactive = false,
@@ -140,8 +140,10 @@ namespace mrGitTags
                     continue;
                 }
 
+                var latestTag = project.LatestTag(tagsArgs.IncludePrereleases);
+
                 _writeln(null);
-                _writeln(project.LatestTag is null
+                _writeln(latestTag is null
                     ? $"{project.Theme_ProjectIndexAndName()}: {"no tag".Pastel(Color.Orange)}"
                     : $"{project.Theme_ProjectIndexAndName()}: {changes.Summary()}");
 
@@ -152,10 +154,10 @@ namespace mrGitTags
                         _writeln($"branch: {tip.Committer.Theme_WhenDateTime()} {project.Branch.FriendlyName.Theme_GitName()} {tip.Author.Theme_Name()}");
                         _writeln($"        {tip.MessageShort}");
 
-                        if (project.LatestTag is not null)
+                        if (latestTag is not null)
                         {
-                            var taggedCommit = project.LatestTaggedCommit!;
-                            _writeln($"tag   : {taggedCommit.Committer.Theme_WhenDateTime()} {project.LatestTag.Tag.FriendlyName.Theme_GitName()} {taggedCommit.Author.Theme_Name()}");
+                            var taggedCommit = latestTag.Commit!;
+                            _writeln($"tag   : {taggedCommit.Committer.Theme_WhenDateTime()} {latestTag.Tag.FriendlyName.Theme_GitName()} {taggedCommit.Author.Theme_Name()}");
                             _writeln($"        {taggedCommit.MessageShort}");
                         }
 
@@ -163,9 +165,7 @@ namespace mrGitTags
                         {
                             using (_writer.Indent())
                             {
-                                WriteCommitsAndFiles(project, project.LatestTag, 
-                                    commitsAndFilesArgs,
-                                    _cancellationToken);
+                                WriteCommitsAndFiles(project, latestTag, commitsAndFilesArgs, tagsArgs, _cancellationToken);
                             }
 
                             if (interactive)
@@ -198,10 +198,14 @@ namespace mrGitTags
         }
 
         private void WriteCommitsAndFiles(Project project, TagInfo? tagInfo,
-            CommitsAndFilesArgs args, CancellationToken cancellationToken)
+            CommitsAndFilesArgs args, TagsArgs tagsArgs, CancellationToken cancellationToken)
         {
             var nextTagInfo = tagInfo?.Next;
-            var target = tagInfo?.Tag.Target ?? project.Repo.FirstCommmit;
+            if (nextTagInfo is not null && nextTagInfo.IsPrerelease && !tagsArgs.IncludePrereleases)
+            {
+                nextTagInfo = null;
+            }
+            var target = tagInfo?.Tag.Target ?? project.Repo.FirstCommit;
             var nextTarget = nextTagInfo?.Tag.Target ?? project.Tip;
 
             // https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection  #Commit Ranges
@@ -226,6 +230,7 @@ namespace mrGitTags
                 }
             }
 
+            if (args.ShowFiles)
             {
                 // https://stackoverflow.com/questions/1552340/how-to-list-only-the-file-names-that-changed-between-two-commits/6827937
 

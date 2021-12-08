@@ -6,6 +6,9 @@ namespace mrGitTags
 {
     public class TagInfo
     {
+        private readonly Repo _repo;
+        private Commit? _commit;
+
         public string Name { get; }
         public SemVersion SemVersion { get; }
         public Tag Tag { get; }
@@ -16,23 +19,26 @@ namespace mrGitTags
 
         public string ShortSha => Tag.Target.ShortSha();
 
+        public Commit Commit => _commit ??= _repo.Git.Lookup<Commit>(Tag.Target.Sha);
+
         public TagInfo? Previous { get; set; }
         public TagInfo? Next { get; set; }
 
-        private TagInfo(string name, SemVersion semVersion, Tag tag)
+        private TagInfo(Repo repo, string name, SemVersion semVersion, Tag tag)
         {
+            _repo = repo;
             Name = name;
             SemVersion = semVersion;
             Tag = tag;
         }
 
-        public static TagInfo ParseOrThrow(Tag tag)
+        public static TagInfo ParseOrThrow(Repo repo, Tag tag)
         {
-            return ParseOrDefault(tag) ??
+            return ParseOrDefault(repo, tag) ??
                    throw new InvalidOperationException($"Unable to parse tag: {tag}");
         }
 
-        public static TagInfo? ParseOrDefault(Tag tag)
+        public static TagInfo? ParseOrDefault(Repo repo, Tag tag)
         {
             var parts = tag.FriendlyName.Split("_");
             if (parts.Length != 2)
@@ -46,7 +52,12 @@ namespace mrGitTags
                 return null;
             }
 
-            return new TagInfo(name, semver, tag);
+            if (tag.PeeledTarget is not Commit c)
+            {
+                return null;
+            }
+
+            return new TagInfo(repo, name, semver, tag);
         }
 
         public override string ToString() => $"{nameof(TagInfo)}: {FriendlyName}";
