@@ -35,7 +35,7 @@ namespace mrGitTags
                 }
             };
 
-            return new AppRunner<RepoApp>(appSettings)
+            return new AppRunner<App>(appSettings)
                 .UseDefaultMiddleware()
                 .UseSpectreAnsiConsole()
                 .UsePrompter()

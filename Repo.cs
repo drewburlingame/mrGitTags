@@ -114,10 +114,9 @@ namespace mrGitTags
             if (_projects == null)
             {
                 _projects = EnumerateFiles(Dir, "*.*proj", SearchOption.AllDirectories)
-                    .Select(p => p.Remove(0, Dir.Length + 1))
+                    .Select(p => Path.GetRelativePath(Dir, p))
                     .Select(s => new Project(this, s))
-                    .Where(p => !p.Name.EndsWith("Tests")
-                                && !p.Name.EndsWith("Example"))
+                    .Where(p => p.IsPublishable)
                     .OrderBy(p => p.Name)
                     .ToList();
 

@@ -27,6 +27,9 @@ namespace mrGitTags
         public Branch Branch => Repo.Branch;
         public Commit Tip => Branch.Tip;
 
+        private static readonly string[] NonPublishableEndings = new[] { "Test", "Tests", "Example", "Examples" };
+        public bool IsPublishable => !NonPublishableEndings.Any(s => Name.EndsWith(s));
+
         public Project(Repo repo, string projectFile)
             : this(repo,
                 Path.GetFileNameWithoutExtension(projectFile),

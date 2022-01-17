@@ -13,7 +13,7 @@ using Color = System.Drawing.Color;
 
 namespace mrGitTags
 {
-    public class RepoApp
+    public class App
     {
         private Repo _repo = null!;
         private IndentableStreamWriter _writer = null!;
@@ -34,7 +34,7 @@ namespace mrGitTags
             _writer = new IndentableStreamWriter(console.WriteLine);
             _writeln = _writer.WriteLine;
 
-            _repo = new Repo(options.RepoDir, options.Branch);
+            _repo = options.GetRepo();
             _cliWrapper = new CliWrapper(commandContext);
             return next();
         }

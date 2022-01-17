@@ -22,6 +22,6 @@ namespace mrGitTags
             set => _repo = new Repo(_repo.Dir, value);
         }
 
-        public Repo Repo() => _repo;
+        public Repo GetRepo() => _repo;
     }
 }
