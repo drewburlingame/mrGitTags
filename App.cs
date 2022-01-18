@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
@@ -135,9 +136,18 @@ namespace mrGitTags
                 var tip = project.Branch.Tip;
                 var changes = project.GetFilesChangedSinceLatestTag(tip).ToList();
 
-                if (modifiedOnly && !changes.Any())
+                if (modifiedOnly)
                 {
-                    continue;
+                    if (!changes.Any())
+                    {
+                        continue;
+                    }
+
+                    if (Config.Get().SkippedCommitsByProject.TryGetValue(project.Name, out var sha) 
+                        && !project.GetFilesChangedBetween(_repo.Git.Lookup(sha), tip).Any())
+                    {
+                        continue;
+                    }
                 }
 
                 var latestTag = project.LatestTag(tagsArgs.IncludePrereleases);
@@ -170,26 +180,36 @@ namespace mrGitTags
 
                             if (interactive)
                             {
+                                (string shortName, string longName, Action? action)?[] actions = 
+                                {
+                                    ("j", "major", () => increment(project.Name, SemVerElement.major, pushTagsToRemote)),
+                                    ("n", "minor", () => increment(project.Name, SemVerElement.minor, pushTagsToRemote)),
+                                    ("p", "patch", () => increment(project.Name, SemVerElement.patch, pushTagsToRemote)),
+                                    ("i", "ignore changes", () =>
+                                    {
+                                        var config = Config.Get();
+                                        config.SkippedCommitsByProject[project.Name] = tip.Sha;
+                                        config.Save();
+                                    }),
+                                    ("s", "skip", null),
+                                    ("q", "quit", () => Environment.Exit(0))
+                                };
+
+                                var actionNames = actions.Select(a => $"{a?.longName}({a?.shortName})");
                                 var response = prompter.PromptForValue(
-                                    "increment version? [major(j)>,minor(n),patch(p),skip(s)]", 
+                                    $"increment version? [{string.Join(',', actionNames)}]", 
                                     out bool isCancellationRequested);
+                                
                                 if (isCancellationRequested || response is null)
                                 {
                                     return;
                                 }
 
-                                if (response.Equals("major", StringComparison.OrdinalIgnoreCase) || response.Equals("j", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    increment(project.Name, SemVerElement.major, pushTagsToRemote);
-                                }
-                                else if (response.Equals("minor", StringComparison.OrdinalIgnoreCase) || response.Equals("n", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    increment(project.Name, SemVerElement.minor, pushTagsToRemote);
-                                }
-                                else if (response.Equals("patch", StringComparison.OrdinalIgnoreCase) || response.Equals("p", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    increment(project.Name, SemVerElement.patch, pushTagsToRemote);
-                                }
+                                var selection = actions.FirstOrDefault(a =>
+                                    response.Equals(a?.shortName, StringComparison.OrdinalIgnoreCase)
+                                    || response.Equals(a?.longName, StringComparison.OrdinalIgnoreCase));
+
+                                selection?.action?.Invoke();
                             }
                         }
                     }
