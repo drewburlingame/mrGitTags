@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandDotNet;
@@ -69,9 +68,9 @@ namespace mrGitTags
                     bool printedNextIfExists = false;
                     foreach (var tagInfo in project.Tags
                         .Where(t => !t.IsPrerelease || tagsArgs.IncludePrereleases)
-                        .SkipUntil(t => skipToVersion == null || t.SemVersion <= skipToVersion)
+                        .SkipUntil(t => skipToVersion == null || t.SemVersion.CompareSortOrderTo(skipToVersion) <= 0)
                         .Take(untilVersion == null ? tagCount : int.MaxValue)
-                        .TakeWhile(t => untilVersion == null || t.SemVersion >= untilVersion)
+                        .TakeWhile(t => untilVersion == null || t.SemVersion.CompareSortOrderTo(untilVersion) >= 0)
                         .TakeUntil(_ => _cancellationToken.IsCancellationRequested))
                     {
                         if (!printedNextIfExists)

@@ -47,7 +47,7 @@ namespace mrGitTags
             }
 
             var name = parts[0];
-            if (!SemVersion.TryParse(parts[1], out var semver))
+            if (!SemVersion.TryParse(parts[1], SemVersionStyles.Any, out var semver))
             {
                 return null;
             }

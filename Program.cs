@@ -31,7 +31,7 @@ namespace mrGitTags
                 {
                     new DelegatedTypeDescriptor<SemVersion>(
                         nameof(SemVersion),
-                        v => SemVersion.Parse(v, strict: true))
+                        v => SemVersion.Parse(v, SemVersionStyles.Strict))
                 }
             };
 

@@ -63,11 +63,11 @@ namespace mrGitTags
             switch (type)
             {
                 case SemVerElement.major:
-                    return semver.Change(major: semver.Major + 1, minor: 0, patch: 0, prerelease: null);
+                    return semver.With(major: semver.Major + 1, minor: 0, patch: 0, prerelease: null);
                 case SemVerElement.minor:
-                    return semver.Change(minor: semver.Minor + 1, patch: 0, prerelease: null);
+                    return semver.With(minor: semver.Minor + 1, patch: 0, prerelease: null);
                 case SemVerElement.patch:
-                    return semver.Change(patch: semver.Patch + 1, prerelease: null);
+                    return semver.With(patch: semver.Patch + 1, prerelease: null);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
