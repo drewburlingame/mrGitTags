@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using LibGit2Sharp;
 using MoreLinq;
+using Semver;
 using static System.IO.Directory;
 
 namespace mrGitTags
@@ -27,8 +28,10 @@ namespace mrGitTags
                 throw new ArgumentNullException(nameof(branch));
             }
 
-            directory ??= GetCurrentDirectory();
-            directory = directory.Trim('/', '\\');
+            if (OperatingSystem.IsWindows())
+            {
+                directory = directory.Trim('/', '\\');
+            }
 
             Dir = directory;
             Git = new Repository(directory);
@@ -94,7 +97,7 @@ namespace mrGitTags
                         g => g.Key,
                         g =>
                         {
-                            var tags = g.OrderByDescending(t => t.SemVersion).ToList();
+                            var tags = g.OrderByDescending(t => t.SemVersion, SemVersion.SortOrderComparer).ToList();
                             for (int i = 0; i < tags.Count; i++)
                             {
                                 if(i-1 >= 0)
